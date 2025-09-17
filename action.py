@@ -104,7 +104,7 @@ def find_7z():
             os.path.join(os.environ.get('ProgramFiles', r'C:\Program Files'), '7-Zip'),
             os.path.join(os.environ.get('ProgramFiles(x86)', r'C:\Program Files (x86)'), '7-Zip'),
             ]
-    paths += os.environ['PATH'].split(os.pathsep)
+    paths += os.environ.get('PATH', '').split(os.pathsep)
 
     for path in paths:
         file = os.path.join(path, '7z.exe' if os.name == 'nt' else '7z')
@@ -293,35 +293,43 @@ def nsis_list():
     """
     installations = []
 
-    uninstall_key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NSIS"
-    for registry in [
-        {'hive': winreg.HKEY_LOCAL_MACHINE, 'hivename': "HKLM", 'view': winreg.KEY_WOW64_64KEY},
-        {'hive': winreg.HKEY_LOCAL_MACHINE, 'hivename': "HKLM", 'view': winreg.KEY_WOW64_32KEY},
-        {'hive': winreg.HKEY_CURRENT_USER,  'hivename': "HKCU", 'view': winreg.KEY_WOW64_64KEY},
-        {'hive': winreg.HKEY_CURRENT_USER,  'hivename': "HKCU", 'view': winreg.KEY_WOW64_32KEY},
-        ]:
-        try:
-            with winreg.OpenKey(registry['hive'], uninstall_key, access= winreg.KEY_READ|registry['view']) as regkey:
-                if verbose: print(f'>> "{registry["hivename"]}\\{uninstall_key}" ({"wow64" if registry["view"] == winreg.KEY_WOW64_32KEY else "nativ"}): found')
-                instdir, regtype = winreg.QueryValueEx(regkey, "InstallLocation")
-                winreg.CloseKey(regkey)
-                instdir = os.path.normpath(os.path.expandvars(instdir))
-                if os.path.exists(os.path.join(instdir, 'makensis.exe')):
-                    if instdir not in installations:
-                        installations.append(instdir)
-                else:
-                    if verbose: print(f'-- "{instdir}" has an invalid/corrupted NSIS installation')
-        except Exception as ex:
-            if verbose: print(f'-- "{registry["hivename"]}\\{uninstall_key}" ({"wow64" if registry["view"] == winreg.KEY_WOW64_32KEY else "nativ"}): {ex}')
+    candidates = []
+    def add_candidate(path):
+        instdir = os.path.normpath(os.path.expandvars(path)).casefold()
+        for candidate in candidates:
+            if instdir == candidate.casefold():
+                return
+        candidates.append(path)
 
-    for instdir in [r'%ProgramFiles%\NSIS', r'%ProgramFiles(x86)%\NSIS']:
-        instdir = os.path.normpath(os.path.expandvars(instdir))
-        if os.path.exists(os.path.join(instdir, 'makensis.exe')):
+    if os.name == 'nt':
+        uninstall_key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NSIS"
+        for registry in [
+            {'hive': winreg.HKEY_LOCAL_MACHINE, 'hivename': "HKLM", 'view': winreg.KEY_WOW64_64KEY},
+            {'hive': winreg.HKEY_LOCAL_MACHINE, 'hivename': "HKLM", 'view': winreg.KEY_WOW64_32KEY},
+            {'hive': winreg.HKEY_CURRENT_USER,  'hivename': "HKCU", 'view': winreg.KEY_WOW64_64KEY},
+            {'hive': winreg.HKEY_CURRENT_USER,  'hivename': "HKCU", 'view': winreg.KEY_WOW64_32KEY},
+            ]:
+            try:
+                with winreg.OpenKey(registry['hive'], uninstall_key, access= winreg.KEY_READ|registry['view']) as regkey:
+                    if verbose: print(f'>> "{registry["hivename"]}\\{uninstall_key}" ({"wow64" if registry["view"] == winreg.KEY_WOW64_32KEY else "nativ"}): found')
+                    instdir, regtype = winreg.QueryValueEx(regkey, "InstallLocation")
+                    winreg.CloseKey(regkey)
+                    add_candidate(instdir)
+            except Exception as ex:
+                if verbose: print(f'-- "{registry["hivename"]}\\{uninstall_key}" ({"wow64" if registry["view"] == winreg.KEY_WOW64_32KEY else "nativ"}): {ex}')
+
+    if os.name == 'nt':
+        add_candidate(r'%ProgramFiles%\NSIS')
+        add_candidate(r'%ProgramFiles(x86)%\NSIS')
+
+    for path in os.environ.get('PATH', '').split(os.pathsep):
+        add_candidate(path)
+
+    for instdir in candidates:
+        if os.path.exists(os.path.join(instdir, 'makensis.exe' if os.name == 'nt' else 'makensis')):
             if verbose: print(f'>> "{instdir}" found')
             if instdir not in installations:
                 installations.append(instdir)
-        else:
-            if verbose: print(f'-- "{instdir}" not found')
 
     return installations
 
