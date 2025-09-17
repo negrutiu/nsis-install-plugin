@@ -1,4 +1,4 @@
-import datetime, importlib, glob, os, re, shutil, subprocess, struct, sys, winreg
+import datetime, importlib, glob, os, re, shutil, subprocess, struct, sys
 from urllib import request
 
 import ssl
@@ -302,6 +302,7 @@ def nsis_list():
         candidates.append(path)
 
     if os.name == 'nt':
+        import winreg
         uninstall_key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NSIS"
         for registry in [
             {'hive': winreg.HKEY_LOCAL_MACHINE, 'hivename': "HKLM", 'view': winreg.KEY_WOW64_64KEY},
