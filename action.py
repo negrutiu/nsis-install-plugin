@@ -331,10 +331,21 @@ def copytree(srcdir, destdir):
             continue
         relpath = os.path.relpath(file, srcdir)
         destpath = os.path.join(destdir, relpath)
-        print(f'-- copy "{file}" to "{destpath}"')
+        print(f'Copy "{relpath}" --> "{destpath}"')
+        # if os.path.isdir(file):
+        #     if not os.path.exists(destpath):
+        #         print(f'  Create directory "{destpath}"')
+        #         os.makedirs(destpath, exist_ok=True)
+        # else:
+        #     destfolder = os.path.dirname(destpath)
+        #     if not os.path.exists(destfolder):
+        #         print(f'  Create directory "{destfolder}"')
+        #         os.makedirs(destfolder, exist_ok=True)
+        #     print(f'  Copy file "{file}" to "{destpath}"')
+        #     shutil.copy2(file, destpath)
 
-def copyfile(src, destdir):
-    print(f'-- copy "{src}" to "{destdir}"')
+def copyfile(src, destdir, srcdir=None):
+    print(f'Copy "{src if srcdir is None else os.path.relpath(src, srcdir)}" --> "{destdir}"')
 
 
 def nsis_inject_plugin(instdir, plugindir):
@@ -465,9 +476,9 @@ def nsis_inject_plugin(instdir, plugindir):
         targetdir = os.path.join(instdir, 'Plugins', plugin['target'])
         if os.path.exists(targetdir):
             unique_files.append(plugin['path'])
-            copyfile(plugin['path'], targetdir)
+            copyfile(plugin['path'], targetdir, plugindir)
         else:
-            print(f'-- skip copying "{plugin["path"]}" to non-existing target directory "{targetdir}"')
+            print(f'Skip copying "{os.path.relpath(plugin["path"], plugindir)}" to non-existing "{targetdir}"')
 
     # copy documentation files
     if os.path.exists(os.path.join(plugindir, 'Docs')) and os.path.isdir(os.path.join(plugindir, 'Docs')):
@@ -478,7 +489,7 @@ def nsis_inject_plugin(instdir, plugindir):
                 for regex in [r'.*readme.*', r'.*howto.*', r'.*docs.*', r'.*\.txt', r'.*\.md']:
                     if re.match(regex, os.path.relpath(file, plugindir), re.IGNORECASE) and file not in unique_files:
                         unique_files.append(file)
-                        copyfile(file, os.path.join(instdir, 'Docs', pluginame))
+                        copyfile(file, os.path.join(instdir, 'Docs', pluginame), plugindir)
 
     # copy example files
     if os.path.exists(os.path.join(plugindir, 'Examples')) and os.path.isdir(os.path.join(plugindir, 'Examples')):
@@ -489,7 +500,7 @@ def nsis_inject_plugin(instdir, plugindir):
                 for regex in [r'.*\.nsi']:
                     if re.match(regex, os.path.relpath(file, plugindir), re.IGNORECASE) and file not in unique_files:
                         unique_files.append(file)
-                        copyfile(file, os.path.join(instdir, 'Examples', pluginame))
+                        copyfile(file, os.path.join(instdir, 'Examples', pluginame), plugindir)
 
     # copy include files
     if os.path.exists(os.path.join(plugindir, 'Include')) and os.path.isdir(os.path.join(plugindir, 'Include')):
@@ -500,7 +511,7 @@ def nsis_inject_plugin(instdir, plugindir):
                 for regex in [r'.*\.nsh']:
                     if re.match(regex, os.path.relpath(file, plugindir), re.IGNORECASE) and file not in unique_files:
                         unique_files.append(file)
-                        copyfile(file, os.path.join(instdir, 'Includes', pluginame))
+                        copyfile(file, os.path.join(instdir, 'Includes', pluginame), plugindir)
 
 if __name__ == '__main__':
 
