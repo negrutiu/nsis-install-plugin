@@ -96,10 +96,37 @@ def import_temp_module(name):
         return module_dir
     return None
 
+def find_7z():
+    """ Find 7z.exe in the system PATH or common installation directories. Returns the path to 7z.exe or None if not found. """
+    paths = []
+    if os.name == 'nt':
+        paths += [
+            os.path.join(os.environ.get('ProgramFiles', r'C:\Program Files'), '7-Zip'),
+            os.path.join(os.environ.get('ProgramFiles(x86)', r'C:\Program Files (x86)'), '7-Zip'),
+            ]
+    paths += os.environ['PATH'].split(os.pathsep)
+
+    for path in paths:
+        file = os.path.join(path, '7z.exe' if os.name == 'nt' else '7z')
+        if os.path.isfile(file) and os.access(file, os.X_OK):
+            return file
+    return None
+
 
 def extract_archive(archive, outdir):
     if not os.path.exists(archive):
         raise FileNotFoundError(f'"{archive}" not found')
+
+    if (zip7 := find_7z()) is not None:
+        try:
+            args = [zip7, 'x', '-y', f'-o{outdir}', archive]
+            os.makedirs(os.path.dirname(outdir), exist_ok=True)
+            subprocess.check_call(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if verbose: print(f'Command {args} returned 0')
+            return
+        except Exception as ex:
+            print(f'{ex}')
+
     if os.path.splitext(archive)[1].lower() == '.zip':
         # only built-in zip methods ("Deflate", "Store") are supported
         # LZMA zips are not supported (example plugins: "NsProcess")
