@@ -1,0 +1,42 @@
+name: Install NSIS plugin
+description: Install generic NSIS plugins on GitHub runners.
+
+inputs:
+  dummy:
+    default: ''
+    required: false
+    description: Dummy input
+
+outputs:
+  dummy:
+    description: Dummy output
+    value: ${{steps.install.outputs.dummy}}
+
+branding:
+  icon: package   # https://feathericons.com
+  color: orange
+  
+runs:
+  using: "composite"
+  steps:
+    - name: Install NSIS plugin
+      id: install
+      shell: python
+      run: |
+        import os, sys
+        if os.getenv('GITHUB_ACTION_PATH', ''):
+          sys.path.insert(0, os.getenv('GITHUB_ACTION_PATH'))
+        elif os.getenv('GITHUB_WORKSPACE', ''):
+          sys.path.insert(0, os.getenv('GITHUB_WORKSPACE'))
+        from action import *
+
+        # list existing NSIS installations
+        for instdir in nsis_list():
+          print(f'Found nsis/{pe_architecture(os.path.join(instdir, "makensis.exe"))}/{nsis_version(instdir)} in "{instdir}"')
+
+        # download and install NSIS plugin
+        # todo
+
+        # outputs
+        with open(os.getenv('GITHUB_OUTPUT'), "a") as f:
+          f.write(f"dummy=Dummy value\n")

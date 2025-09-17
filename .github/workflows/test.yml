@@ -1,0 +1,52 @@
+name: Test nsis-install-plugin
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'bugfix/**'
+
+  workflow_dispatch:
+
+jobs:
+
+  windows-tests:
+    name: Windows tests
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - name: Debug
+        shell: python
+        run: |
+          import glob, os
+          print('--------------------------------------------------------------------------------')
+          os.system('set' if os.name == 'nt' else 'printenv')
+          print('--------------------------------------------------------------------------------')
+          print(f'>> {os.getenv("GITHUB_WORKSPACE")}')
+          for file in glob.glob(os.path.join(os.getenv('RUNNER_TOOL_CACHE'), '*'), recursive=False):
+              print(f'-- {file}')
+          print('--------------------------------------------------------------------------------')
+          print('>> 7-zip')
+          os.system('7z')
+          print('--------------------------------------------------------------------------------')
+          print('>> makensis')
+          os.system('makensis -VERSION')
+          print('--------------------------------------------------------------------------------')
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install NSIS plugin
+        id: install
+        uses: ./    # use ./action.yml
+
+      - name: Post-install
+        shell: python
+        run: |
+          print(rf'dummy = "${{steps.install.outputs.dummy}}"')
