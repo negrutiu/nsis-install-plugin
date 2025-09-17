@@ -31,8 +31,9 @@ runs:
         from action import *
 
         # list existing NSIS installations
-        for instdir in nsis_list():
-          print(f'Found nsis/{pe_architecture(os.path.join(instdir, "makensis.exe"))}/{nsis_version(instdir)} in "{instdir}"')
+        for makensis, instdir in nsis_list():
+          arch = pe_architecture(makensis) if os.name == 'nt' else 'amd64'
+          print(f'Found "{makensis}", "{instdir}", ver:{nsis_version(makensis)}, arch:{arch}')
 
         # download and install NSIS plugin
         # todo

@@ -154,6 +154,20 @@ def pe_architecture(path):
     return machines.get(machine, None)
 
 
+def pe_version(path, product=False):
+    """ Return the file or product version of a PE file or `None`. """
+    import_temp_module('pefile')
+    with pefile.PE(path) as pe:
+        if 'VS_FIXEDFILEINFO' in pe.__dict__:
+            if pe.VS_FIXEDFILEINFO:
+                if len(pe.VS_FIXEDFILEINFO) > 0:
+                    verinfo = pe.VS_FIXEDFILEINFO[0]
+                    if product:
+                        return f'{verinfo.ProductVersionMS >> 16}.{verinfo.ProductVersionMS & 0xFFFF}.{verinfo.ProductVersionLS >> 16}.{verinfo.ProductVersionLS & 0xFFFF}'
+                    else:
+                        return f'{verinfo.FileVersionMS >> 16}.{verinfo.FileVersionMS & 0xFFFF}.{verinfo.FileVersionLS >> 16}.{verinfo.FileVersionLS & 0xFFFF}'
+    return None
+
 def pe_imports_charset_count(path):
     """
     Count the number of ANSI and Wide (Unicode) imports in a PE file.
@@ -270,10 +284,10 @@ def pe_is_debug(path):
     return False
 
 
-def nsis_version(instdir):
-    """ Query NSIS version by executing `makensis.exe /VERSION` in the specified installation directory. Returns `None` on error. """
+def nsis_version(makensis):
+    """ Query NSIS version by executing `makensis -VERSION`. Returns a version string like `3.09` or `None`. """
     try:
-        process = subprocess.Popen([os.path.join(instdir if instdir is not None else '', 'makensis.exe'), '/VERSION'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.Popen([makensis, '-VERSION'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         cout, cerr = process.communicate()
         process.wait()
         if cout != None:
@@ -281,7 +295,7 @@ def nsis_version(instdir):
                 if (matches := re.search(r'^v(\d+\.\d+(\.\d+(\.\d+)?)?)', line)) != None:   # look for "v1.2[.3[.4]]"
                     return matches.group(1)
     except Exception as ex:
-        print(f'-- get_nsis_version("{instdir}"): {ex}')
+        print(f'-- get_nsis_version("{makensis}"): {ex}')
     return None
 
 
@@ -289,17 +303,17 @@ def nsis_list():
     """
     List all NSIS installations found in the registry and default locations.
     Returns:
-      List of unique installation directories.
+      list: `[(makensis1, instdir1), ...]`
     """
     installations = []
 
-    candidates = []
-    def add_candidate(path):
-        instdir = os.path.normpath(os.path.expandvars(path)).casefold()
-        for candidate in candidates:
-            if instdir == candidate.casefold():
+    candidate_list = []
+    def candidate_add(path):
+        path = os.path.normpath(os.path.expandvars(path))
+        for candidate in candidate_list:
+            if path.casefold() == candidate.casefold():
                 return
-        candidates.append(path)
+        candidate_list.append(path)
 
     if os.name == 'nt':
         import winreg
@@ -313,24 +327,40 @@ def nsis_list():
             try:
                 with winreg.OpenKey(registry['hive'], uninstall_key, access= winreg.KEY_READ|registry['view']) as regkey:
                     if verbose: print(f'>> "{registry["hivename"]}\\{uninstall_key}" ({"wow64" if registry["view"] == winreg.KEY_WOW64_32KEY else "nativ"}): found')
-                    instdir, regtype = winreg.QueryValueEx(regkey, "InstallLocation")
+                    dir, regtype = winreg.QueryValueEx(regkey, "InstallLocation")
                     winreg.CloseKey(regkey)
-                    add_candidate(instdir)
+                    candidate_add(dir)
             except Exception as ex:
                 if verbose: print(f'-- "{registry["hivename"]}\\{uninstall_key}" ({"wow64" if registry["view"] == winreg.KEY_WOW64_32KEY else "nativ"}): {ex}')
 
     if os.name == 'nt':
-        add_candidate(r'%ProgramFiles%\NSIS')
-        add_candidate(r'%ProgramFiles(x86)%\NSIS')
+        candidate_add(r'%ProgramFiles%\NSIS')
+        candidate_add(r'%ProgramFiles(x86)%\NSIS')
 
     for path in os.environ.get('PATH', '').split(os.pathsep):
-        add_candidate(path)
+        candidate_add(path)
 
-    for instdir in candidates:
-        if os.path.exists(os.path.join(instdir, 'makensis.exe' if os.name == 'nt' else 'makensis')):
-            if verbose: print(f'>> "{instdir}" found')
-            if instdir not in installations:
-                installations.append(instdir)
+    for dir in candidate_list:
+        makensis = os.path.join(dir, 'makensis.exe' if os.name == 'nt' else 'makensis')
+        if os.path.exists(makensis):
+            makensis = os.path.realpath(makensis)   # resolve symlinks
+            instdir =os.path.dirname(makensis)
+            if instdir == '/usr/bin' or instdir == '/usr/local/bin':
+                assert os.name == 'posix'
+                instdir = '/usr/share/nsis'
+                assert os.path.exists(instdir) and os.path.isdir(instdir), f'Invalid NSIS share directory: "{instdir}"'
+            elif os.path.basename(instdir).casefold() == 'bin':
+                instdir = os.path.dirname(instdir)  # /opt/homebrew/Cellar/makensis/3.11/bin -> /opt/homebrew/Cellar/makensis/3.11
+                assert os.path.exists(instdir) and os.path.isdir(instdir), f'Invalid NSIS share directory: "{instdir}"'
+
+            unique = True
+            for makensis0, instdir0 in installations:
+                if makensis0.casefold() == makensis.casefold():
+                    unique = False
+                    break
+            if unique:
+                installations.append((makensis, instdir))
+                if verbose: print(f'>> "{makensis}" / "{instdir}" found')
 
     return installations
 
