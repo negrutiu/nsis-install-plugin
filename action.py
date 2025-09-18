@@ -374,6 +374,20 @@ def nsis_list():
 
     return installations
 
+def format_path(file, basedir=None):
+    assert file, 'file is None'
+    properties = []
+    if os.path.exists(file) and os.path.isfile(file) and os.path.splitext(file)[1].lower() in ['.dll', '.exe', '.sys', '.ocx']:
+        try:
+            if dt := pe_header_datetime(file): properties.append(str(dt.date()))
+        except:
+            pass
+        try:
+            if v := pe_version(file): properties.append(v)
+        except:
+            pass
+    return f'"{os.path.relpath(file, basedir) if basedir else file}"{" ["+", ".join(properties)+"]" if properties else ""}'
+
 
 def nsis_inject_plugin(instdir, plugindir, input_dict={}):
     """
@@ -433,15 +447,8 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
         """ Copy a file to a directory. `file` can be absolute or relative to `plugindir`. """
         relfile = os.path.normpath(os.path.relpath(file, plugindir) if os.path.isabs(file) else file)
         absfile = os.path.normpath(file if os.path.isabs(file) else os.path.join(plugindir, file))
-        properties = []
-        if os.path.splitext(absfile)[1].lower() in ['.dll', '.exe', '.sys', '.ocx']:
-            try:
-                if dt := pe_header_datetime(absfile): properties.append(str(dt.date()))
-            except: pass
-            try:
-                if v := pe_version(absfile): properties.append(v)
-            except: pass
-        print(f'Copy "{relfile}"{" ["+", ".join(properties)+"]" if properties else ""} --> "{destdir}"')
+        destfile = os.path.join(destdir, os.path.basename(file))
+        print(f'Copy {format_path(absfile, plugindir)} --> {format_path(destfile, instdir)}')
 
     plugin_files = []
     for file in glob.glob(os.path.join(plugindir, '**', '*.dll'), recursive=True):
@@ -573,7 +580,7 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
             unique_files.append(plugin['path'])
             copyfile(plugin['path'], targetdir)
         else:
-            print(f'Skip copying "{os.path.relpath(plugin["path"], plugindir)}" to non-existing "{targetdir}"')
+            print(f'Skip {format_path(plugin["path"], plugindir)} --> {format_path(targetdll, instdir)} (unsupported target)')
 
     # copy other files
     copy_matrix = [
