@@ -168,6 +168,17 @@ def pe_version(path, product=False):
                         return f'{verinfo.FileVersionMS >> 16}.{verinfo.FileVersionMS & 0xFFFF}.{verinfo.FileVersionLS >> 16}.{verinfo.FileVersionLS & 0xFFFF}'
     return None
 
+
+def pe_header_datetime(path):
+    """ Return the PE header timestamp as a `datetime` object or `None`. """
+    import_temp_module('pefile')
+    with pefile.PE(path) as pe:
+        timestamp = pe.FILE_HEADER.TimeDateStamp
+        if timestamp != 0:
+            return datetime.datetime.fromtimestamp(timestamp)
+    return None
+
+
 def pe_imports_charset_count(path):
     """
     Count the number of ANSI and Wide (Unicode) imports in a PE file.
@@ -422,11 +433,15 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
         """ Copy a file to a directory. `file` can be absolute or relative to `plugindir`. """
         relfile = os.path.normpath(os.path.relpath(file, plugindir) if os.path.isabs(file) else file)
         absfile = os.path.normpath(file if os.path.isabs(file) else os.path.join(plugindir, file))
-        try:
-            version = pe_version(absfile) if os.path.splitext(absfile)[1].lower() in ['.dll', '.exe', '.sys', '.ocx'] else None
-        except:
-            version = None
-        print(f'Copy "{relfile}"{"" if not version else " [" + version + "]"} --> "{destdir}"')
+        properties = []
+        if os.path.splitext(absfile)[1].lower() in ['.dll', '.exe', '.sys', '.ocx']:
+            try:
+                if dt := pe_header_datetime(absfile): properties.append(str(dt.date()))
+            except: pass
+            try:
+                if v := pe_version(absfile): properties.append(v)
+            except: pass
+        print(f'Copy "{relfile}"{" ["+", ".join(properties)+"]" if properties else ""} --> "{destdir}"')
 
     plugin_files = []
     for file in glob.glob(os.path.join(plugindir, '**', '*.dll'), recursive=True):
