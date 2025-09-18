@@ -431,7 +431,7 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
     copy_count = 0
     print(f'Injecting plugins from "{plugindir}" into "{instdir}"')
     if input_dict is None: input_dict = {}
-    print(f'Input: {input_dict}')
+    if len(input_dict) > 0 or verbose: print(f'Input: {input_dict}')
 
     mandatory_directories = ['Bin', 'Contrib', 'Docs', 'Examples', 'Include', 'Plugins', 'Stubs']
     if os.name == 'nt':
@@ -587,7 +587,7 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
             candidates.sort(key=len)    # prefer shortest name
             pluginame = candidates[0]
 
-    if pluginame: print(f'Info: Assign plugin name "{pluginame}"')
+    if pluginame and verbose: print(f'Info: Assign plugin name "{pluginame}"')
     assert pluginame, f'Cannot determine plugin name in "{plugindir}"'
 
     # copy plugin (*.dll) files
