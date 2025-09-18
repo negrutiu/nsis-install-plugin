@@ -62,7 +62,7 @@ def download_github_asset(owner, repo, tag, name_regex, outdir):
         return asset_path
 
 
-def download_file(url, outdir):
+def download_file(url, outdir, useragent=None):
     """ Download a file from the specified URL to the specified output directory. Returns the path to the downloaded file. """
     file_path = os.path.join(outdir, os.path.basename(url))
     if os.path.exists(file_path):
@@ -72,7 +72,9 @@ def download_file(url, outdir):
     print(f'Downloading {url} to "{outdir}"')
     t0 = datetime.datetime.now()
     sslctx = ssl.create_default_context(cafile=certifi.where())
-    with request.urlopen(url, context=sslctx) as http:
+    headers = {'User-Agent': useragent} if useragent else {}
+    myrequest = request.Request(url, headers=headers)
+    with request.urlopen(myrequest, context=sslctx) as http:
         if not os.path.exists(outdir):
             os.makedirs(outdir, exist_ok=True)
         with open(file_path, 'wb') as file:
