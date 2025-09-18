@@ -415,7 +415,11 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
             - `x86-ansi` (str): Regex to identify x86-ansi plugin DLLs.
             - `amd64-unicode` (str): Regex to identify amd64-unicode plugin DLLs.
             - `ignore` (str): Regex to ignore certain files or directories.
+
+    Returns:
+        copy_count (int): Number of files copied.
     """
+    copy_count = 0
     print(f'Injecting plugins from "{plugindir}" into "{instdir}"')
     if input_dict is None: input_dict = {}
     print(f'Input: {input_dict}')
@@ -451,6 +455,8 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
         print(f'Copy {format_path(absfile, plugindir)} --> {format_path(destfile, instdir)}')
         os.makedirs(os.path.dirname(destfile), exist_ok=True)
         shutil.copyfile(absfile, destfile)
+        nonlocal copy_count
+        copy_count += 1
 
     plugin_files = []
     for file in glob.glob(os.path.join(plugindir, '**', '*.dll'), recursive=True):
@@ -609,7 +615,7 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
                                 unique_files.append(file)
                                 if not should_ignore(file):
                                     copyfile(file, destination_dir)
-
+    return copy_count
 
 if __name__ == '__main__':
 
