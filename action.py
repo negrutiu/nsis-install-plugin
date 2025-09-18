@@ -179,6 +179,14 @@ def pe_header_datetime(path):
     return None
 
 
+def pe_file_is_newer(path1, path2):
+    """ Return `True` if `path1` is newer than `path2` based on PE header timestamp. """
+    assert os.path.exists(path1) and os.path.isfile(path1), f'File not found: "{path1}"'
+    if os.path.exists(path2) and os.path.isfile(path2):
+        return pe_header_datetime(path1) > pe_header_datetime(path2)
+    return True     # path1 wins
+
+
 def pe_imports_charset_count(path):
     """
     Count the number of ANSI and Wide (Unicode) imports in a PE file.
@@ -415,6 +423,7 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
             - `x86-ansi` (str): Regex to identify x86-ansi plugin DLLs.
             - `amd64-unicode` (str): Regex to identify amd64-unicode plugin DLLs.
             - `ignore` (str): Regex to ignore certain files or directories.
+            - `overwrite-newer` (bool): If `True`, overwrite target files even if they are newer than the source files. Default is `False`.
 
     Returns:
         copy_count (int): Number of files copied.
@@ -582,13 +591,22 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
     assert pluginame, f'Cannot determine plugin name in "{plugindir}"'
 
     # copy plugin (*.dll) files
+    overwrite_newer = input_dict.get('overwrite-newer', False)
     for plugin in plugin_files:
         targetdir = os.path.join(instdir, 'Plugins', plugin['target'])
+        targetdll = os.path.join(targetdir, os.path.basename(plugin['path']))
         if os.path.exists(targetdir):
             unique_files.append(plugin['path'])
-            copyfile(plugin['path'], targetdir)
+            if overwrite_newer or pe_file_is_newer(plugin['path'], targetdll):
+                copyfile(plugin['path'], targetdir)
+            else:
+                print(f'Skip {format_path(plugin["path"], plugindir)} --> {format_path(targetdll, instdir)} (not newer)')
         else:
             print(f'Skip {format_path(plugin["path"], plugindir)} --> {format_path(targetdll, instdir)} (unsupported target)')
+
+    if copy_count == 0:
+        if verbose: print(f'Info: All plugin DLL files are up-to-date. No files copied.')
+        return copy_count
 
     # copy other files
     copy_matrix = [
