@@ -5,6 +5,8 @@ import ssl
 from pip._vendor import certifi     # use pip certifi to fix (urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1123)>)
 
 scriptdir = os.path.dirname(os.path.abspath(__file__))
+modulesdir = os.path.join(scriptdir, 'runtime', 'modules')        # temporary directory for downloaded modules
+
 
 # GitHub Actions sets RUNNER_DEBUG=1 when debug logging is enabled
 if verbose := (os.environ.get("RUNNER_DEBUG", default="0") == "1"):
@@ -83,20 +85,21 @@ def download_file(url, outdir, useragent=None):
         return file_path
 
 
-def import_temp_module(name):
+def import_temp_module(modname):
     """ Import module, installing it to a temporary location if necessary. """
     try:
-        globals()[name] = importlib.import_module(name)
+        globals()[modname] = importlib.import_module(modname)
     except ImportError:
-        module_dir = os.path.join(scriptdir, 'temp', name)
-        if not os.path.exists(module_dir):
-            print(f'Install {name} into temporary directory {module_dir}')
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "--target", module_dir, name])
-        print(f'Import "{module_dir}"')
-        sys.path.insert(0, module_dir)
-        globals()[name] = importlib.import_module(name)
-        return module_dir
+        moduledir = os.path.join(modulesdir, modname)
+        if not os.path.exists(moduledir):
+            print(f'Install {modname} into temporary directory {moduledir}')
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "--target", moduledir, modname])
+        print(f'Import "{moduledir}"')
+        sys.path.insert(0, moduledir)
+        globals()[modname] = importlib.import_module(modname)
+        return moduledir
     return None
+
 
 def find_7z():
     """ Find 7z.exe in the system PATH or common installation directories. Returns the path to 7z.exe or None if not found. """
@@ -649,7 +652,8 @@ if __name__ == '__main__':
     if args.verbose:
         verbose = True
 
-    for instdir in (list := nsis_list()):
-        print(f'Found nsis/{pe_architecture(os.path.join(instdir, "makensis.exe"))}/{nsis_version(instdir)} in "{instdir}"')
+    for makensis, instdir in (list := nsis_list()):
+        arch = pe_architecture(makensis) if os.name == 'nt' else 'amd64'
+        print(f'Found nsis/{nsis_version(makensis)}-{arch} "{makensis}" / "{instdir}"')
     if not list:
         print('No NSIS installations found')

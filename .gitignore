@@ -1,2 +1,3 @@
 *nogit*
-/temp/
+runtime/
+__pycache__/
