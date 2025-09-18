@@ -360,34 +360,11 @@ def nsis_list():
                     break
             if unique:
                 installations.append((makensis, instdir))
-                if verbose: print(f'>> "{makensis}" / "{instdir}" found')
 
     return installations
 
-def copytree(srcdir, destdir):
-    for file in glob.glob(os.path.join(srcdir, '**'), recursive=True):
-        if not os.path.isfile(file):
-            continue
-        relpath = os.path.relpath(file, srcdir)
-        destpath = os.path.join(destdir, relpath)
-        print(f'Copy "{relpath}" --> "{destpath}"')
-        # if os.path.isdir(file):
-        #     if not os.path.exists(destpath):
-        #         print(f'  Create directory "{destpath}"')
-        #         os.makedirs(destpath, exist_ok=True)
-        # else:
-        #     destfolder = os.path.dirname(destpath)
-        #     if not os.path.exists(destfolder):
-        #         print(f'  Create directory "{destfolder}"')
-        #         os.makedirs(destfolder, exist_ok=True)
-        #     print(f'  Copy file "{file}" to "{destpath}"')
-        #     shutil.copy2(file, destpath)
 
-def copyfile(src, destdir, srcdir=None):
-    print(f'Copy "{src if srcdir is None else os.path.relpath(src, srcdir)}" --> "{destdir}"')
-
-
-def nsis_inject_plugin(instdir, plugindir):
+def nsis_inject_plugin(instdir, plugindir, input_dict={}):
     """
     Inject plugin files from `plugindir` into the NSIS installation at `instdir`.
     The function attempts to identify the plugin files by their names and copies them to the appropriate directories.
@@ -401,8 +378,22 @@ def nsis_inject_plugin(instdir, plugindir):
             - x86-unicode/
             - x86-ansi/
             - amd64-unicode/
+    
+    Parameters:
+        instdir (str): Path to the NSIS installation directory.
+    
+        plugindir (str): Path to the directory containing the plugin files.
+
+        input_dict (dict): Optional dictionary with input parameters:
+            - `plugin-name` (str): Name of the plugin. If not specified, the name is inferred from the DLL filenames.
+            - `x86-unicode` (str): Regex to identify x86-unicode plugin DLLs.
+            - `x86-ansi` (str): Regex to identify x86-ansi plugin DLLs.
+            - `amd64-unicode` (str): Regex to identify amd64-unicode plugin DLLs.
+            - `ignore` (str): Regex to ignore certain files or directories.
     """
     print(f'Injecting plugins from "{plugindir}" into "{instdir}"')
+    if input_dict is None: input_dict = {}
+    print(f'Input: {input_dict}')
 
     mandatory_directories = ['Bin', 'Contrib', 'Docs', 'Examples', 'Include', 'Plugins', 'Stubs']
     if os.name == 'nt':
@@ -417,41 +408,73 @@ def nsis_inject_plugin(instdir, plugindir):
         assert os.path.exists(absfile) and os.path.isfile(absfile), f'Invalid NSIS installation directory: "{instdir}" (missing "{file}")'
     
     # collect all .dll files and classify them by architecture and charset
+    def should_ignore(relpath):
+        """ Return `True` if the path should be ignored. The path can be absolute or relative to `plugindir`. """
+        if (regex := input_dict.get('ignore')) is not None:
+            if os.path.isabs(relpath):
+                relpath = os.path.normpath(os.path.relpath(relpath, plugindir))
+            if re.match(regex, relpath, re.IGNORECASE):
+                if verbose: print(f'Info: Ignore "{relpath}" by input regex')
+                return True
+        return False
+
+    def copyfile(file, destdir):
+        """ Copy a file to a directory. `file` can be absolute or relative to `plugindir`. """
+        relfile = os.path.normpath(os.path.relpath(file, plugindir) if os.path.isabs(file) else file)
+        absfile = os.path.normpath(file if os.path.isabs(file) else os.path.join(plugindir, file))
+        try:
+            version = pe_version(absfile) if os.path.splitext(absfile)[1].lower() in ['.dll', '.exe', '.sys', '.ocx'] else None
+        except:
+            version = None
+        print(f'Copy "{relfile}"{"" if not version else " [" + version + "]"} --> "{destdir}"')
+
     plugin_files = []
     for file in glob.glob(os.path.join(plugindir, '**', '*.dll'), recursive=True):
         if os.path.isfile(file):
             relfile = os.path.normpath(os.path.relpath(file, plugindir))
-            if (arch := pe_architecture(file)) not in ['x86', 'amd64']:
+            if should_ignore(relfile):
+                pass
+            elif (arch := pe_architecture(file)) not in ['x86', 'amd64']:
                 print(f'Warning: Ignore "{relfile}" with unsupported architecture "{arch}"')
-            elif (subdir := relfile.split(os.sep)[0]).lower() in ['contrib', 'docs', 'examples', 'include']:
-                print(f'Warning: Ignore "{relfile}" in reserved directory "{subdir}"')
+            elif (source_dir := relfile.split(os.sep)[0]).lower() in ['contrib', 'docs', 'examples', 'include']:
+                print(f'Warning: Ignore "{relfile}" in reserved directory "{source_dir}"')
             elif pe_is_debug(file):
                 print(f'Warning: Ignore "{relfile}" (debug PE file)')
             elif relfile[:5].lower() == 'debug':
                 print(f'Warning: Ignore "{relfile}" (in "Debug" directory)')
             else:
                 plugin_files.append({'path': file})
-    
     assert len(plugin_files) > 0, f'No DLL files found in "{plugindir}"'
 
-    pluginame = None
     for plugin in plugin_files:
         # already classified?
         if (target := plugin.get('target', None)) is not None and target != '':
             continue
 
-        # plugin name
-        name = os.path.splitext(os.path.basename(file))[0]
-        if pluginame is None:
-            pluginame = name
-        elif pluginame != name:
-            print(f'Warning: Multiple plugin names found in "{plugindir}": "{pluginame}" and "{name}"')
-
-        # determine target architecture
+        # PE info
         ansi_count, wide_count = pe_imports_charset_count(plugin['path'])
         arch = pe_architecture(plugin['path'])
 
+        # match by regex
         relfile = os.path.relpath(plugin['path'], plugindir)
+        regex_dict = {}
+        if (regex := input_dict.get('x86-unicode')) is not None:   regex_dict['x86-unicode'] = regex
+        if (regex := input_dict.get('x86-ansi')) is not None:      regex_dict['x86-ansi'] = regex
+        if (regex := input_dict.get('amd64-unicode')) is not None: regex_dict['amd64-unicode'] = regex
+        match_count = 0
+        for target, regex in regex_dict.items():
+            if re.match(regex, relfile, re.IGNORECASE):
+                match_count += 1
+                if match_count == 1:
+                    plugin['target'] = target
+                else:
+                    plugin_files.append({'path': plugin['path'], 'target': target})
+                print(f'Info: Classified "{relfile}" as "{target}" by input regex')
+
+        if (target := plugin.get('target', None)):
+            continue    # already classified by regex
+
+        # determine target architecture
         charset = None
         for regex in [r'.*unicode.*']:
             if re.match(regex, relfile, re.IGNORECASE):
@@ -498,59 +521,71 @@ def nsis_inject_plugin(instdir, plugindir):
                 charset = 'unicode'
                 plugin_files.append({'path': plugin['path'], 'target': 'x86-ansi'})
                 print(f'Warning: Assuming charset of "{relfile}" is both ansi and unicode (A:{ansi_count}/W:{wide_count} imports, only one x86 plugin DLL found)')
-            else:
-                charset = 'unicode'
-                print(f'Warning: Assuming charset of "{relfile}" is "{charset}" (A:{ansi_count}/W:{wide_count} imports, only one amd64 plugin DLL found)')
+        if charset is None and arch == 'amd64':
+            # example plugins: "Registry"
+            charset = 'unicode'
+            print(f'Warning: Assuming charset of "{relfile}" is "{charset}" (A:{ansi_count}/W:{wide_count} imports, amd64 is likely unicode)')            
 
         if charset is not None and arch in ['x86', 'amd64']:
             plugin['target'] = f'{arch}-{charset}'
         else:
             raise ValueError(f'Cannot classify "{relfile}". architecture="{arch}", charset="{charset}"')
 
-    assert pluginame is not None, f'Cannot determine plugin name in "{plugindir}"'
     unique_files = []
+
+    # plugin name
+    pluginame = input_dict.get('plugin-name', None)
+    if pluginame is None:
+        candidates = []
+        for plugin in plugin_files:
+            if plugin.get('path') is not None and plugin.get('target') is not None:
+                filename = os.path.splitext(os.path.basename(plugin['path']))[0]
+                if filename not in candidates:
+                    candidates.append(filename)
+        if len(candidates) >= 2:
+            print(f'Warning: Multiple plugin names found in "{plugindir}": {candidates}')
+        if len(candidates) >= 1:
+            candidates.sort(key=len)    # prefer shortest name
+            pluginame = candidates[0]
+
+    if pluginame: print(f'Info: Assign plugin name "{pluginame}"')
+    assert pluginame, f'Cannot determine plugin name in "{plugindir}"'
 
     # copy plugin (*.dll) files
     for plugin in plugin_files:
         targetdir = os.path.join(instdir, 'Plugins', plugin['target'])
         if os.path.exists(targetdir):
             unique_files.append(plugin['path'])
-            copyfile(plugin['path'], targetdir, plugindir)
+            copyfile(plugin['path'], targetdir)
         else:
             print(f'Skip copying "{os.path.relpath(plugin["path"], plugindir)}" to non-existing "{targetdir}"')
 
-    # copy documentation files
-    if os.path.exists(os.path.join(plugindir, 'Docs')) and os.path.isdir(os.path.join(plugindir, 'Docs')):
-        copytree(os.path.join(plugindir, 'Docs'), os.path.join(instdir, 'Docs'))
-    else:
-        for file in glob.glob(os.path.join(plugindir, '**'), recursive=True):
-            if os.path.isfile(file):
-                for regex in [r'.*readme.*', r'.*howto.*', r'.*docs.*', r'.*\.txt', r'.*\.md']:
-                    if re.match(regex, os.path.relpath(file, plugindir), re.IGNORECASE) and file not in unique_files:
-                        unique_files.append(file)
-                        copyfile(file, os.path.join(instdir, 'Docs', pluginame), plugindir)
+    # copy other files
+    copy_matrix = [
+        (os.path.join(plugindir, 'Docs'),     [r'.*readme.*', r'.*howto.*', r'.*docs.*', r'.*\.txt', r'.*\.md'], os.path.join(instdir, 'Docs', pluginame)),
+        (os.path.join(plugindir, 'Examples'), [r'.*\.nsi'], os.path.join(instdir, 'Examples', pluginame)),
+        (os.path.join(plugindir, 'Include'),  [r'.*\.nsh'], os.path.join(instdir, 'Include'))
+    ]
+    
+    for source_dir, source_regex_list, destination_dir in copy_matrix:
+        if os.path.exists(source_dir) and os.path.isdir(source_dir):
+            # copy source_dir -> destination_dir, where source is available
+            for file in glob.glob(os.path.join(source_dir, '**'), recursive=True):
+                if os.path.isfile(file):
+                    if not should_ignore(file):
+                        copyfile(file, destination_dir)
+        else:
+            # source_dir doesn't exist
+            # copy `source\**\<regex>` -> destination_dir
+            for file in glob.glob(os.path.join(plugindir, '**'), recursive=True):
+                if os.path.isfile(file):
+                    for regex in source_regex_list:
+                        if re.match(regex, os.path.relpath(file, plugindir), re.IGNORECASE):
+                            if file not in unique_files:
+                                unique_files.append(file)
+                                if not should_ignore(file):
+                                    copyfile(file, destination_dir)
 
-    # copy example files
-    if os.path.exists(os.path.join(plugindir, 'Examples')) and os.path.isdir(os.path.join(plugindir, 'Examples')):
-        copytree(os.path.join(plugindir, 'Examples'), os.path.join(instdir, 'Examples'))
-    else:
-        for file in glob.glob(os.path.join(plugindir, '**'), recursive=True):
-            if os.path.isfile(file):
-                for regex in [r'.*\.nsi']:
-                    if re.match(regex, os.path.relpath(file, plugindir), re.IGNORECASE) and file not in unique_files:
-                        unique_files.append(file)
-                        copyfile(file, os.path.join(instdir, 'Examples', pluginame), plugindir)
-
-    # copy include files
-    if os.path.exists(os.path.join(plugindir, 'Include')) and os.path.isdir(os.path.join(plugindir, 'Include')):
-        copytree(os.path.join(plugindir, 'Include'), os.path.join(instdir, 'Includes'))
-    else:
-        for file in glob.glob(os.path.join(plugindir, '**'), recursive=True):
-            if os.path.isfile(file):
-                for regex in [r'.*\.nsh']:
-                    if re.match(regex, os.path.relpath(file, plugindir), re.IGNORECASE) and file not in unique_files:
-                        unique_files.append(file)
-                        copyfile(file, os.path.join(instdir, 'Includes', pluginame), plugindir)
 
 if __name__ == '__main__':
 
