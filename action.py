@@ -449,6 +449,8 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
         absfile = os.path.normpath(file if os.path.isabs(file) else os.path.join(plugindir, file))
         destfile = os.path.join(destdir, os.path.basename(file))
         print(f'Copy {format_path(absfile, plugindir)} --> {format_path(destfile, instdir)}')
+        os.makedirs(os.path.dirname(destfile), exist_ok=True)
+        shutil.copyfile(absfile, destfile)
 
     plugin_files = []
     for file in glob.glob(os.path.join(plugindir, '**', '*.dll'), recursive=True):
