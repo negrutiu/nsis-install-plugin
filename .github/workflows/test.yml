@@ -110,20 +110,37 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Tests
+      - name: Install NSIS plugins (overwrite newer)
         shell: python
         run: |
           import glob, os, sys
           sys.path.insert(0, os.path.join(r'${{github.workspace}}', '.github', 'workflows'))
           import test
 
-          print('Prepare temporary NSIS installations...')
+          print('Preparing temporary NSIS installations...')
           test.test_nsis_list()
 
           copied = 0
-          copied += test.test_github_plugins()
-          copied += test.test_web_plugins()
+          copied += test.test_github_plugins(overwrite_newer=True, expect_zero_copies=False)
+          copied += test.test_web_plugins(overwrite_newer=True, expect_zero_copies=False)
 
           test.print_line('=')
           print(f'Copied {copied} files')
           test.print_line('=')
+          assert copied > 0, 'No files were copied in the first round, something is wrong!'
+
+      - name: Install NSIS plugins (no overwrite)
+        shell: python
+        run: |
+          import glob, os, sys
+          sys.path.insert(0, os.path.join(r'${{github.workspace}}', '.github', 'workflows'))
+          import test
+
+          copied = 0
+          copied += test.test_github_plugins(overwrite_newer=False, expect_zero_copies=True)
+          copied += test.test_web_plugins(overwrite_newer=False, expect_zero_copies=True)
+
+          test.print_line('=')
+          print(f'Copied {copied} files')
+          test.print_line('=')
+          assert copied == 0, f'{copied} files were copied in the second round, something is wrong!'

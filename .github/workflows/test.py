@@ -65,7 +65,7 @@ def test_nsis_list(force_download=False, force_extract=False):
     return nsis_list
 
 
-def test_github_plugins():
+def test_github_plugins(overwrite_newer=False, expect_zero_copies=False):
     input_list = [
         {'github_owner': 'negrutiu',      'github_repo': 'nsis-nscurl',        'github_tag': 'latest', 'github_asset_regex': r'NScurl\.zip'},
         {'github_owner': 'negrutiu',      'github_repo': 'nsis-nsxfer',        'github_tag': 'latest', 'github_asset_regex': r'NSxfer.*\.7z'},
@@ -81,11 +81,17 @@ def test_github_plugins():
         print_line()
         print(f'[github][{index}/{len(input_list)}] {str(input)}')
         input['nsis_directory'] = [nsis[1] for nsis in test_nsis_list()]  # list of NSIS installation directories
+        input['nsis_overwrite_newer'] = overwrite_newer
         copied += action.nsis_install_plugin(input)
+        if overwrite_newer:
+            assert copied > 0, f'No files were copied for {str(input)}, non-zero expected'
+        if expect_zero_copies:
+            assert copied == 0, f'{copied} files were copied for {str(input)}, zero expected'
+
     return copied
 
 
-def test_web_plugins():
+def test_web_plugins(overwrite_newer=False, expect_zero_copies=False):
     input_list = [
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/4/4a/AccessControl.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/7/7b/Animate.zip'},
@@ -243,7 +249,13 @@ def test_web_plugins():
             print_line()
             print(f'[web][{index}/{len(input_list)}] {input["url"]}')
             input['nsis_directory'] = [nsis[1] for nsis in test_nsis_list()]  # list of NSIS installation directories
+            input['nsis_overwrite_newer'] = overwrite_newer
             copied += action.nsis_install_plugin(input)
+            if overwrite_newer:
+                assert copied > 0, f'No files were copied for {str(input)}, non-zero expected'
+            if expect_zero_copies:
+                assert copied == 0, f'{copied} files were copied for {str(input)}, zero expected'
+
     return copied
 
 
@@ -260,15 +272,14 @@ if __name__ == '__main__':
     if args.verbose:
         action.verbose = True
 
-    print('Preparing test NSIS installations...')
+    print('Preparing temporary NSIS installations...')
     test_nsis_list(force_extract=args.recreate_test_nsis, force_download=args.recreate_test_nsis)
 
-    copy_count = 0
+    copied = 0
+    copied += test_github_plugins()
+    copied += test_web_plugins()
 
-    copy_count += test_github_plugins()
-    copy_count += test_web_plugins()
-
-    print('================================================================================')
-    print(f'Copied {copy_count} files')
-    print('================================================================================')
+    print_line('=')
+    print(f'Copied {copied} files')
+    print_line('=')
 
