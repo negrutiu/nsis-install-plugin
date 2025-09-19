@@ -11,8 +11,8 @@ on:
 
 jobs:
 
-  windows-tests:
-    name: Tests
+  basic-tests:
+    name: Basic Tests
     strategy:
       fail-fast: false
       matrix:
@@ -94,3 +94,36 @@ jobs:
             print('--------------------------------------------------------------------------------', flush=True)
 
           print(rf'dummy = "${{steps.install.outputs.dummy}}"', flush=True)
+
+  # --------------------------------------------------------------------------------
+
+  advanced-tests:
+    name: Advanced Tests
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Tests
+        shell: python
+        run: |
+          import glob, os, sys
+          sys.path.insert(0, os.path.join(r'${{github.workspace}}', '.github', 'workflows'))
+          import test
+
+          print('Prepare temporary NSIS installations...')
+          test.test_nsis_list()
+
+          copied = 0
+          copied += test.test_github_plugins()
+          copied += test.test_web_plugins()
+
+          test.print_line('=')
+          print(f'Copied {copied} files')
+          test.print_line('=')
