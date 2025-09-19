@@ -71,7 +71,9 @@ def test_github_plugins(overwrite_newer=False, expect_zero_copies=False):
         {'github_owner': 'negrutiu',      'github_repo': 'nsis-nsxfer',        'github_tag': 'latest', 'github_asset_regex': r'NSxfer.*\.7z'},
         {'github_owner': 'negrutiu',      'github_repo': 'nsis-nsutils',       'github_tag': 'latest', 'github_asset_regex': r'NSutils.*\.7z'},
         {'github_owner': 'connectiblutz', 'github_repo': 'NSIS-ApplicationID', 'github_tag': 'latest', 'github_asset_regex': r'NSIS-ApplicationID\.zip'},
-        {'github_owner': 'lordmulder',    'github_repo': 'stdutils',           'github_tag': 'latest', 'github_asset_regex': r'StdUtils.*\.zip', 'plugin_ignore_regex': r'.*(\/|\\)Tiny(\/|\\).*'},
+        {'github_owner': 'lordmulder',    'github_repo': 'stdutils',           'github_tag': 'latest', 'github_asset_regex': r'StdUtils.*\.zip',
+          'plugin_ignore_regex': r'.*(\/|\\)Tiny(\/|\\).*',
+          'tags': ['overlapping']},  # multiple DLLs with same name and target
         ]
 
     copied = 0
@@ -177,7 +179,9 @@ def test_web_plugins(overwrite_newer=False, expect_zero_copies=False):
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/18/NsProcess.zip', 'tags': ['lzma']},           # LZMA zip
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/5/59/NsRandom.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/0/0f/NsResize.zip'},
-        {'url': 'https://oss.netfarm.it/win32/nsRestartExplorer-1.4.7z', 'tags': ['7z']},
+        {'url': 'https://oss.netfarm.it/win32/nsRestartExplorer-1.4.7z',
+         'plugin_ignore_regex': r'.*MinGW Ansi.*',
+         'tags': ['7z', 'overlapping']},  # multiple DLLs with same name and target
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/e/e5/NsRichEdit.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/7/7e/NsSCM.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/1e/NsScreenshot.zip'},
