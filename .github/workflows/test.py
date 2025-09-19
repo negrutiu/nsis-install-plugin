@@ -154,8 +154,8 @@ def test_web_plugins(overwrite_newer=False, expect_zero_copies=False):
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/d/d4/Internet.zip'},
     #   {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/12/InvokeShellVerb-1.1.zip'},   # 404
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/c/c1/IpConfig.zip'},
-        {'url': 'https://nsis.sourceforge.io/mediawiki/images/5/53/KillProcDll&FindProcDll.zip'},
-        {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/12/KillProcDLL-bin.zip'},
+        {'url': 'https://nsis.sourceforge.io/mediawiki/images/5/53/KillProcDll&FindProcDll.zip', 'tags': ['multiple']},  # multiple plugins in one archive
+    #   {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/12/KillProcDLL-bin.zip'},       # conflict with above
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/5/55/Linker-1.2.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/a/af/Locate.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/d/d3/LockedList.zip'},
@@ -221,9 +221,9 @@ def test_web_plugins(overwrite_newer=False, expect_zero_copies=False):
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/5/51/Services.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/11/SetCursor.zip', 'tags': ['stu']},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/f/fb/Sfhelper.zip'},
-        {'url': 'https://nsis.sourceforge.io/mediawiki/images/c/c7/ShellExecAsUser.zip'},
+    #   {'url': 'https://nsis.sourceforge.io/mediawiki/images/c/c7/ShellExecAsUser.zip'},               # conflict with below
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/6/68/ShellExecAsUser_amd64-Unicode.7z', 'tags': ['7z', 'bcj2']},   # BCJ2 filter is not supported by py7zr
-        {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/1d/ShellExecAsUserUnicodeUpdate.zip'},
+    #   {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/1d/ShellExecAsUserUnicodeUpdate.zip'},  # conflict with above
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/6/6c/Shelllink.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/f/f9/ShutDown.zip', 'tags': ['stu']},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/3/35/ShutdownAllow.zip', 'tags': ['stu']},
