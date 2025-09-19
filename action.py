@@ -18,7 +18,7 @@ if verbose := (os.environ.get("RUNNER_DEBUG", default="0") == "1"):
     print(f'Platform: os.name="{os.name}", sys.platform="{sys.platform}"')
 
 
-def download_github_asset(owner, repo, tag, name_regex, outdir):
+def download_github_asset(owner, repo, tag, name_regex, outdir, headers={}):
     """
     Download a GitHub release asset matching the specified regex.
     Returns the path to the downloaded file.
@@ -34,8 +34,9 @@ def download_github_asset(owner, repo, tag, name_regex, outdir):
 
     if verbose: print(f'Listing assets from "{url}"')
     t0 = datetime.datetime.now()
-    sslctx = ssl.create_default_context(cafile=certifi.where())
-    with request.urlopen(url, context=sslctx) as http:
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
+    http_request = request.Request(url, headers=headers)
+    with request.urlopen(http_request, context=ssl_context) as http:
         import json
         response_json = json.loads(http.read().decode('utf-8'))
         if verbose:
@@ -58,7 +59,8 @@ def download_github_asset(owner, repo, tag, name_regex, outdir):
 
     print(f'Downloading {asset_url} to "{outdir}"')
     t0 = datetime.datetime.now()
-    with request.urlopen(asset_url, context=sslctx) as http:
+    http_request = request.Request(asset_url, headers=headers)
+    with request.urlopen(http_request, context=ssl_context) as http:
         if not os.path.exists(outdir):
             os.makedirs(outdir, exist_ok=True)
         with open(asset_path, 'wb') as file:
@@ -67,7 +69,7 @@ def download_github_asset(owner, repo, tag, name_regex, outdir):
         return asset_path
 
 
-def download_file(url, outdir, useragent=None):
+def download_file(url, outdir, headers={}):
     """ Download a file from the specified URL to the specified output directory. Returns the path to the downloaded file. """
     filename = os.path.basename(url)
     if sys.platform == 'darwin':
@@ -79,10 +81,9 @@ def download_file(url, outdir, useragent=None):
 
     print(f'Downloading {url} to "{outdir}"')
     t0 = datetime.datetime.now()
-    sslctx = ssl.create_default_context(cafile=certifi.where())
-    headers = {'User-Agent': useragent} if useragent else {}
-    myrequest = request.Request(url, headers=headers)
-    with request.urlopen(myrequest, context=sslctx) as http:
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
+    http_request = request.Request(url, headers=headers)
+    with request.urlopen(http_request, context=ssl_context) as http:
         if not os.path.exists(outdir):
             os.makedirs(outdir, exist_ok=True)
         with open(filepath, 'wb') as file:
