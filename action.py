@@ -580,6 +580,14 @@ def nsis_install_plugin_files(instdir, plugindir, input={}):
         else:
             raise ValueError(f'Cannot classify "{relfile}". architecture="{arch}", charset="{charset}"')
 
+    # check for overlapping plugin files
+    for plugin in plugin_files:
+        overlapping = sum(1 for entry in plugin_files if entry['target'] == plugin['target'] and os.path.basename(entry['path']).casefold() == os.path.basename(plugin['path']).casefold())
+        if overlapping > 1:
+            for entry in plugin_files:
+                print(f'Found "{entry["path"]}" for target "{entry["target"]}"')
+            raise ValueError(f'Found overlapping plugin DLLs for target "{plugin["target"]}". Use "plugin_ignore_regex" to exclude duplicates.')
+
     unique_files = []
 
     # plugin name

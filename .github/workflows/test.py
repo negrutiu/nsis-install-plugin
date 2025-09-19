@@ -71,7 +71,7 @@ def test_github_plugins(overwrite_newer=False, expect_zero_copies=False):
         {'github_owner': 'negrutiu',      'github_repo': 'nsis-nsxfer',        'github_tag': 'latest', 'github_asset_regex': r'NSxfer.*\.7z'},
         {'github_owner': 'negrutiu',      'github_repo': 'nsis-nsutils',       'github_tag': 'latest', 'github_asset_regex': r'NSutils.*\.7z'},
         {'github_owner': 'connectiblutz', 'github_repo': 'NSIS-ApplicationID', 'github_tag': 'latest', 'github_asset_regex': r'NSIS-ApplicationID\.zip'},
-        {'github_owner': 'lordmulder',    'github_repo': 'stdutils',           'github_tag': 'latest', 'github_asset_regex': r'StdUtils.*\.zip'},
+        {'github_owner': 'lordmulder',    'github_repo': 'stdutils',           'github_tag': 'latest', 'github_asset_regex': r'StdUtils.*\.zip', 'plugin_ignore_regex': r'.*(\/|\\)Tiny(\/|\\).*'},
         ]
 
     copied = 0
