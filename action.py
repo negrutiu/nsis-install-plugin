@@ -75,10 +75,7 @@ def download_github_asset(owner, repo, tag, name_regex, outdir, headers={}):
 
 def download_file(url, outdir, headers={}):
     """ Download a file from the specified URL to the specified output directory. Returns the path to the downloaded file. """
-    filename = os.path.basename(url)
-    if sys.platform == 'darwin':
-        filename += '.7z'   # workaround for macOS GitHub Actions runner where 7z refuzes to open .exe files
-    filepath = os.path.join(outdir, filename)
+    filepath = os.path.join(outdir, os.path.basename(url))
     if os.path.exists(filepath):
         print(f'Reuse existing "{filepath}"')
         return filepath
@@ -137,7 +134,10 @@ def extract_archive(archive, outdir):
         try:
             args = [zip7, 'x', '-y', f'-o{outdir}', archive]
             os.makedirs(os.path.dirname(outdir), exist_ok=True)
-            subprocess.check_call(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if sys.platform == 'darwin':
+                subprocess.check_call(args) # show output
+            else:
+                subprocess.check_call(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if verbose: print(f'Command {args} returned 0')
             return
         except Exception as ex:
