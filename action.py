@@ -69,10 +69,13 @@ def download_github_asset(owner, repo, tag, name_regex, outdir):
 
 def download_file(url, outdir, useragent=None):
     """ Download a file from the specified URL to the specified output directory. Returns the path to the downloaded file. """
-    file_path = os.path.join(outdir, os.path.basename(url))
-    if os.path.exists(file_path):
-        print(f'Reuse existing "{file_path}"')
-        return file_path
+    filename = os.path.basename(url)
+    if sys.platform == 'darwin':
+        filename += '.7z'   # workaround for macOS GitHub Actions runner where 7z refuzes to open .exe files
+    filepath = os.path.join(outdir, filename)
+    if os.path.exists(filepath):
+        print(f'Reuse existing "{filepath}"')
+        return filepath
 
     print(f'Downloading {url} to "{outdir}"')
     t0 = datetime.datetime.now()
@@ -82,10 +85,10 @@ def download_file(url, outdir, useragent=None):
     with request.urlopen(myrequest, context=sslctx) as http:
         if not os.path.exists(outdir):
             os.makedirs(outdir, exist_ok=True)
-        with open(file_path, 'wb') as file:
+        with open(filepath, 'wb') as file:
             shutil.copyfileobj(http, file)
             if verbose: print(f'  HTTP {http.status} {http.reason}, {int((datetime.datetime.now()-t0).total_seconds()*1000)} ms')
-        return file_path
+        return filepath
 
 
 def import_temp_module(modname):
