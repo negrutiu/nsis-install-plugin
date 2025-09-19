@@ -5,57 +5,57 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(scriptdir)))
 import action    # ../../action.py
 
 tempdir = os.path.join(scriptdir, 'runtime')
-downloadsdir = os.path.join(tempdir, 'downloads')
-pluginsdir = os.path.join(tempdir, 'plugins')
-action.modulesdir = os.path.join(tempdir, 'modules')  # override the location of temporary modules
+action.downloadsdir = os.path.join(tempdir, 'downloads')    # override
+action.pluginsdir = os.path.join(tempdir, 'plugins')        # override
+action.modulesdir = os.path.join(tempdir, 'modules')        # override
 
-def print_line(char='-', length=60, suffix=''):
+def print_line(char='-', length=80, suffix=''):
     print(char * length + suffix)
 
 def test_nsis_list(force_download=False, force_extract=False):
     nsis_list = []
 
     github_sources = [
-        {'owner': 'negrutiu', 'repo': 'nsis', 'tag': 'latest', 'file-regex': r'nsis-.*-x86\.exe', 'dirname': 'nsis-negrutiu-x86'},
-        {'owner': 'negrutiu', 'repo': 'nsis', 'tag': 'latest', 'file-regex': r'nsis-.*-amd64\.exe', 'dirname': 'nsis-negrutiu-amd64'},
+        ('negrutiu', 'nsis', 'latest', r'nsis-.*-x86\.exe', 'nsis-negrutiu-x86'),
+        ('negrutiu', 'nsis', 'latest', r'nsis-.*-amd64\.exe', 'nsis-negrutiu-amd64'),
         ]
     web_sources = [
-        {'url': 'https://unlimited.dl.sourceforge.net/project/nsis/NSIS%203/3.11/nsis-3.11-setup.exe', 'file-regex': 'nsis-3\.11-setup\.exe', 'dirname': 'nsis-3.11'},
+        ('https://unlimited.dl.sourceforge.net/project/nsis/NSIS%203/3.11/nsis-3.11-setup.exe', r'nsis-3\.11-setup\.exe', 'nsis-3.11'),
         ]
     
-    for source in github_sources:
-        instdir = os.path.join(tempdir, 'nsis', source['dirname'])
+    for owner, repo, tag, regex, dirname in github_sources:
+        instdir = os.path.join(tempdir, 'nsis', dirname)
         if force_extract:
             shutil.rmtree(instdir, ignore_errors=True)  # delete and re-extract
         if not os.path.exists(instdir):
             setupexe = None
-            for file in glob.glob(os.path.join(downloadsdir, '*')):
-                if os.path.isfile(file) and re.match(source['file-regex'], os.path.basename(file), re.IGNORECASE):
+            for file in glob.glob(os.path.join(action.downloadsdir, '*')):
+                if os.path.isfile(file) and re.match(regex, os.path.basename(file), re.IGNORECASE):
                     if force_download:
                         os.remove(file)     # delete and re-download
                     else:
                         setupexe = file     # use this file
             if not setupexe:
-                setupexe = action.download_github_asset(source['owner'], source['repo'], source['tag'], source['file-regex'], downloadsdir)
+                setupexe = action.download_github_asset(owner, repo, tag, regex, action.downloadsdir)
                 action.extract_archive(setupexe, instdir)
         makensisexe = os.path.join(instdir, 'makensis.exe')
         assert os.path.isfile(makensisexe), f'File not found: {makensisexe}'
         nsis_list.append((makensisexe, instdir))
 
-    for source in web_sources:
-        instdir = os.path.join(tempdir, 'nsis', source['dirname'])
+    for url, regex, dirname in web_sources:
+        instdir = os.path.join(tempdir, 'nsis', dirname)
         if force_extract:
             shutil.rmtree(instdir, ignore_errors=True)  # delete and re-extract
         if not os.path.exists(instdir):
             setupexe = None
-            for file in glob.glob(os.path.join(downloadsdir, '*')):
-                if os.path.isfile(file) and re.match(source['file-regex'], os.path.basename(file), re.IGNORECASE):
+            for file in glob.glob(os.path.join(action.downloadsdir, '*')):
+                if os.path.isfile(file) and re.match(regex, os.path.basename(file), re.IGNORECASE):
                     if force_download:
                         os.remove(file)     # delete and re-download
                     else:
                         setupexe = file     # use this file
             if not setupexe:
-                setupexe = action.download_file(source['url'], downloadsdir)
+                setupexe = action.download_file(url, action.downloadsdir)
                 action.extract_archive(setupexe, instdir)
         makensisexe = os.path.join(instdir, 'makensis.exe')
         assert os.path.isfile(makensisexe), f'File not found: {makensisexe}'
@@ -66,31 +66,27 @@ def test_nsis_list(force_download=False, force_extract=False):
 
 
 def test_github_plugins():
-    github_plugins = [
-        {'owner': 'negrutiu',      'repo': 'nsis-nscurl',        'tag': 'latest', 'name_regex': r'NScurl\.zip'},
-        {'owner': 'negrutiu',      'repo': 'nsis-nsxfer',        'tag': 'latest', 'name_regex': r'NSxfer.*\.7z'},
-        {'owner': 'negrutiu',      'repo': 'nsis-nsutils',       'tag': 'latest', 'name_regex': r'NSutils.*\.7z'},
-        {'owner': 'connectiblutz', 'repo': 'NSIS-ApplicationID', 'tag': 'latest', 'name_regex': r'NSIS-ApplicationID\.zip'},
-        {'owner': 'lordmulder',    'repo': 'stdutils',           'tag': 'latest', 'name_regex': r'StdUtils.*\.zip'},
+    input_list = [
+        {'github_owner': 'negrutiu',      'github_repo': 'nsis-nscurl',        'github_tag': 'latest', 'github_asset_regex': r'NScurl\.zip'},
+        {'github_owner': 'negrutiu',      'github_repo': 'nsis-nsxfer',        'github_tag': 'latest', 'github_asset_regex': r'NSxfer.*\.7z'},
+        {'github_owner': 'negrutiu',      'github_repo': 'nsis-nsutils',       'github_tag': 'latest', 'github_asset_regex': r'NSutils.*\.7z'},
+        {'github_owner': 'connectiblutz', 'github_repo': 'NSIS-ApplicationID', 'github_tag': 'latest', 'github_asset_regex': r'NSIS-ApplicationID\.zip'},
+        {'github_owner': 'lordmulder',    'github_repo': 'stdutils',           'github_tag': 'latest', 'github_asset_regex': r'StdUtils.*\.zip'},
         ]
 
-    count = 0
+    copied = 0
     index = 0
-    for plugin in github_plugins:
+    for input in input_list:
         index += 1
         print_line()
-        print(f'[github][{index}/{len(github_plugins)}] {str(plugin)}')
-        pluginzip = action.download_github_asset(plugin['owner'], plugin['repo'], plugin['tag'], plugin['name_regex'], downloadsdir)
-        plugindir = os.path.join(pluginsdir, os.path.splitext(os.path.basename(pluginzip))[0])
-        action.extract_archive(pluginzip, plugindir)
-        for makensis, instdir in test_nsis_list():
-            count += action. nsis_inject_plugin(instdir, plugindir)
-
-    return count
+        print(f'[github][{index}/{len(input_list)}] {str(input)}')
+        input['nsis_directory'] = [nsis[1] for nsis in test_nsis_list()]  # list of NSIS installation directories
+        copied += action.nsis_install_plugin(input)
+    return copied
 
 
 def test_web_plugins():
-    web_plugins = [
+    input_list = [
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/4/4a/AccessControl.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/7/7b/Animate.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/1a/AnimGif.zip'},
@@ -148,7 +144,7 @@ def test_web_plugins():
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/c/c9/Inetc.zip'},
         {'url': 'https://master.dl.sourceforge.net/project/nsis-ioex/IOEx%20beta/2.4.5%20beta%203/InstallOptionsEx2.4.5b3.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/d/d4/Internet.zip'},
-        {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/12/InvokeShellVerb-1.1.zip'},
+    #   {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/12/InvokeShellVerb-1.1.zip'},   # 404
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/c/c1/IpConfig.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/5/53/KillProcDll&FindProcDll.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/12/KillProcDLL-bin.zip'},
@@ -159,7 +155,8 @@ def test_web_plugins():
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/13/Marquee.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/d/d7/Md5dll.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/6/67/Mssql_oledb2.zip', 'tags': ['classify'],
-         'input': {'x86-unicode': r'Plugins(\/|\\)UMSSQL_OLEDB\.dll', 'x86-ansi': r'Plugins(\/|\\)MSSQL_OLEDB\.dll'}},   # charset classification failure "Plugins\UMSSQL_OLEDB.dll"
+         'plugin_x86_unicode_regex': r'Plugins(\/|\\)UMSSQL_OLEDB\.dll',
+         'plugin_x86_ansi_regex': r'Plugins(\/|\\)MSSQL_OLEDB\.dll'},   # charset classification failure "Plugins\UMSSQL_OLEDB.dll"
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/19/Name2ip.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/c/cf/NewAdvSplash.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/6/69/Nsis7z_19.00.7z', 'tags': ['7z', 'bcj2']},   # BCJ2 filter is not supported by py7zr
@@ -206,7 +203,9 @@ def test_web_plugins():
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/c/ce/RealProgress.zip', 'tags': ['stu']},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/13/RegBin.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/4/47/Registry.zip', 'tags': ['classify'],
-         'input': {'ignore': r'.*PocketPC.*', 'x86-unicode': r'.*Plugin(\/|\\)registry\.dll', 'x86-ansi': r'.*Plugin(\/|\\)registry\.dll'}},    # charset classification failure
+         'plugin_ignore_regex': r'.*PocketPC.*',
+         'plugin_x86_unicode_regex': r'.*Plugin(\/|\\)registry\.dll',
+         'plugin_x86_ansi_regex': r'.*Plugin(\/|\\)registry\.dll'},    # charset classification failure
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/f/fe/ScrollLicense.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/0/08/SelfDel.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/5/51/Services.zip'},
@@ -236,20 +235,16 @@ def test_web_plugins():
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/6/6f/Win7TaskbarProgress_20091109.zip'},
         ]
     
-    count = 0
+    copied = 0
     index = 0
-    for plugin in web_plugins:
+    for input in input_list:
         index += 1
-        if not plugin.get('url'): continue
-        print_line()
-        print(f'[web][{index}/{len(web_plugins)}] {plugin["url"]}')
-        pluginzip = action.download_file(plugin['url'], downloadsdir)
-        plugindir = os.path.join(pluginsdir, os.path.splitext(os.path.basename(pluginzip))[0])
-        action.extract_archive(pluginzip, plugindir)
-        for makensis, instdir in test_nsis_list():
-            count += action.nsis_inject_plugin(instdir, plugindir, input_dict=plugin.get('input'))
-
-    return count
+        if input.get('url'):
+            print_line()
+            print(f'[web][{index}/{len(input_list)}] {input["url"]}')
+            input['nsis_directory'] = [nsis[1] for nsis in test_nsis_list()]  # list of NSIS installation directories
+            copied += action.nsis_install_plugin(input)
+    return copied
 
 
 if __name__ == '__main__':

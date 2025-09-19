@@ -5,7 +5,10 @@ import ssl
 from pip._vendor import certifi     # use pip certifi to fix (urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1123)>)
 
 scriptdir = os.path.dirname(os.path.abspath(__file__))
-modulesdir = os.path.join(scriptdir, 'runtime', 'modules')        # temporary directory for downloaded modules
+tempdir = os.path.join(scriptdir, 'runtime')
+downloadsdir = os.path.join(tempdir, 'downloads')
+pluginsdir = os.path.join(tempdir, 'plugins')
+modulesdir = os.path.join(scriptdir, 'runtime', 'modules')        # directory for temporary modules
 
 
 # GitHub Actions sets RUNNER_DEBUG=1 when debug logging is enabled
@@ -402,9 +405,9 @@ def format_path(file, basedir=None):
     return f'"{os.path.relpath(file, basedir) if basedir else file}"{" ["+", ".join(properties)+"]" if properties else ""}'
 
 
-def nsis_inject_plugin(instdir, plugindir, input_dict={}):
+def nsis_install_plugin_files(instdir, plugindir, input={}):
     """
-    Inject plugin files from `plugindir` into the NSIS installation at `instdir`.
+    Copy plugin files from `plugindir` into the NSIS installation at `instdir`.
     The function attempts to identify the plugin files by their names and copies them to the appropriate directories.
 
     The recommended plugin layout is:
@@ -422,21 +425,18 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
     
         plugindir (str): Path to the directory containing the plugin files.
 
-        input_dict (dict): Optional dictionary with input parameters:
-            - `plugin-name` (str): Name of the plugin. If not specified, the name is inferred from the DLL filenames.
-            - `x86-unicode` (str): Regex to identify x86-unicode plugin DLLs.
-            - `x86-ansi` (str): Regex to identify x86-ansi plugin DLLs.
-            - `amd64-unicode` (str): Regex to identify amd64-unicode plugin DLLs.
-            - `ignore` (str): Regex to ignore certain files or directories.
-            - `overwrite-newer` (bool): If `True`, overwrite target files even if they are newer than the source files. Default is `False`.
+        input (dict): Optional input parameters (see script arguments for details), including:
+        - `plugin_name`
+        - `plugin_x86_ansi_regex`, `plugin_x86_unicode_regex`, `plugin_amd64_unicode_regex`
+        - `plugin_ignore_regex`
+        - `nsis_overwrite_newer`
 
     Returns:
-        copy_count (int): Number of files copied.
+        copied (int): Number of files copied.
     """
-    copy_count = 0
-    print(f'Injecting plugins from "{plugindir}" into "{instdir}"')
-    if input_dict is None: input_dict = {}
-    if len(input_dict) > 0 or verbose: print(f'Input: {input_dict}')
+    copied = 0
+    print(f'Installing plugin from "{plugindir}" into "{instdir}"')
+    if input is None: input = {}
 
     mandatory_directories = ['Bin', 'Contrib', 'Docs', 'Examples', 'Include', 'Plugins', 'Stubs']
     if os.name == 'nt':
@@ -453,7 +453,7 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
     # collect all .dll files and classify them by architecture and charset
     def should_ignore(relpath):
         """ Return `True` if the path should be ignored. The path can be absolute or relative to `plugindir`. """
-        if (regex := input_dict.get('ignore')) is not None:
+        if (regex := input.get('plugin_ignore_regex')) is not None:
             if os.path.isabs(relpath):
                 relpath = os.path.normpath(os.path.relpath(relpath, plugindir))
             if re.match(regex, relpath, re.IGNORECASE):
@@ -469,8 +469,8 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
         print(f'Copy {format_path(absfile, plugindir)} --> {format_path(destfile, instdir)}')
         os.makedirs(os.path.dirname(destfile), exist_ok=True)
         shutil.copyfile(absfile, destfile)
-        nonlocal copy_count
-        copy_count += 1
+        nonlocal copied
+        copied += 1
 
     plugin_files = []
     for file in glob.glob(os.path.join(plugindir, '**', '*.dll'), recursive=True):
@@ -502,9 +502,9 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
         # match by regex
         relfile = os.path.relpath(plugin['path'], plugindir)
         regex_dict = {}
-        if (regex := input_dict.get('x86-unicode')) is not None:   regex_dict['x86-unicode'] = regex
-        if (regex := input_dict.get('x86-ansi')) is not None:      regex_dict['x86-ansi'] = regex
-        if (regex := input_dict.get('amd64-unicode')) is not None: regex_dict['amd64-unicode'] = regex
+        if (regex := input.get('plugin_x86_unicode_regex')) is not None:   regex_dict['x86-unicode'] = regex
+        if (regex := input.get('plugin_x86_ansi_regex')) is not None:      regex_dict['x86-ansi'] = regex
+        if (regex := input.get('plugin_amd64_unicode_regex')) is not None: regex_dict['amd64-unicode'] = regex
         match_count = 0
         for target, regex in regex_dict.items():
             if re.match(regex, relfile, re.IGNORECASE):
@@ -578,7 +578,7 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
     unique_files = []
 
     # plugin name
-    pluginame = input_dict.get('plugin-name', None)
+    pluginame = input.get('plugin_name', None)
     if pluginame is None:
         candidates = []
         for plugin in plugin_files:
@@ -596,7 +596,7 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
     assert pluginame, f'Cannot determine plugin name in "{plugindir}"'
 
     # copy plugin (*.dll) files
-    overwrite_newer = input_dict.get('overwrite-newer', False)
+    overwrite_newer = input.get('nsis_overwrite_newer', False)
     for plugin in plugin_files:
         targetdir = os.path.join(instdir, 'Plugins', plugin['target'])
         targetdll = os.path.join(targetdir, os.path.basename(plugin['path']))
@@ -609,9 +609,9 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
         else:
             print(f'Skip {format_path(plugin["path"], plugindir)} --> {format_path(targetdll, instdir)} (unsupported target)')
 
-    if copy_count == 0:
+    if copied == 0:
         if verbose: print(f'Info: All plugin DLL files are up-to-date. No files copied.')
-        return copy_count
+        return copied
 
     # copy other files
     copy_matrix = [
@@ -638,22 +638,106 @@ def nsis_inject_plugin(instdir, plugindir, input_dict={}):
                                 unique_files.append(file)
                                 if not should_ignore(file):
                                     copyfile(file, destination_dir)
-    return copy_count
+    return copied
+
+
+def nsis_install_plugin(input):
+    """ Main function to download and install a NSIS plugin. """
+    
+    if verbose:
+        print(f'Input: {input}')
+
+    # list NSIS installations
+    nsis_installations = []
+    if instdir_list := input.get('nsis_directory'):
+        assert (type(instdir_list) == list and len(instdir_list) > 0), f'Invalid --nsis-directory argument: {instdir_list}'
+        for instdir in instdir_list:
+            instdir = os.path.normpath(os.path.expandvars(instdir))
+            assert os.path.exists(instdir) and os.path.isdir(instdir), f'Invalid NSIS installation directory: "{instdir}"'
+            if os.path.exists(path := os.path.join(instdir, 'makensis.exe')):
+                makensis = path
+            elif os.path.exists(path := os.path.join(instdir, 'makensis')):
+                makensis = path
+            else:
+                raise ValueError(f'Invalid NSIS installation directory: "{instdir}" (missing "makensis.exe" or "makensis")')
+            nsis_installations.append((makensis, instdir))
+    else:
+        nsis_installations = nsis_list()
+    assert len(nsis_installations) > 0, 'No NSIS installations found on the system'
+
+    # download plugin
+    github_owner = input.get('github_owner', None)
+    github_repo  = input.get('github_repo', None)
+    github_tag   = input.get('github_tag', 'latest')
+    github_asset_regex = input.get('github_asset_regex', None)
+    url = input.get('url', None)
+    pluginzip = None
+    if github_owner and github_repo and github_tag and github_asset_regex:
+        pluginzip = download_github_asset(github_owner, github_repo, github_tag, github_asset_regex, downloadsdir)
+    elif url:
+        pluginzip = download_file(url, downloadsdir)
+    else:
+        raise ValueError('No plugin source specified. Use either the GitHub options or the URL option.')
+    
+    # unzip plugin archive
+    plugindir = os.path.join(pluginsdir, os.path.basename(os.path.splitext(pluginzip)[0]))
+    extract_archive(pluginzip, plugindir)
+
+    copied = 0
+    for makensis, instdir in nsis_installations:
+        # try:
+        #     version = nsis_version(makensis)
+        #     arch = pe_architecture(makensis)
+        # except:
+        #     version = 'unknown'
+        #     arch = 'unknown'
+        # print(f'Found nsis/{version}-{arch} in "{instdir}"')
+        copied += nsis_install_plugin_files(instdir, plugindir, input)
+
+    print(f'Copied {copied} files.')
+    return copied
+
 
 if __name__ == '__main__':
 
     from argparse import ArgumentParser
-    parser = ArgumentParser()
+    import argparse
+    parser = ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        prog='nsis-install-plugin',
+        description='Download and install NSIS plugins into NSIS installations.',
+        epilog=
+'''
+Examples:
+  action.py --github-owner "negrutiu" --github-repo "nsis-nscurl" --github-tag=latest --github-asset-regex "NScurl\\.zip"
+  action.py --url "https://nsis.sourceforge.io/mediawiki/images/1/14/NsExpr.zip"
+'''
+    )
     parser.add_argument("-v", "--verbose", action='store_true', help='more verbose output')
-    args = parser.parse_args()
 
-    print(f'Arguments: {args.__dict__}')
+    groupGitHub = parser.add_argument_group('GitHub', 'Download a NSIS plugin from a GitHub release')
+    groupGitHub.add_argument('--github-owner', type=str, help='github owner (user or organization)')
+    groupGitHub.add_argument('--github-repo', type=str, help='github repository')
+    groupGitHub.add_argument('--github-tag', type=str, default='latest', help='github release tag (default: "latest")')
+    groupGitHub.add_argument('--github-asset-regex', type=str, help='regex to match github release asset name (e.g. "plugin\\.zip")')
+
+    groupWeb = parser.add_argument_group('Web', 'Download a NSIS plugin from a web URL')
+    groupWeb.add_argument('--url', type=str, help='URL to download a file')
+
+    groupPlugin = parser.add_argument_group('NSIS plugin options')
+    groupPlugin.add_argument('--plugin-name', type=str, help='optional plugin name (if not specified, the name is inferred from the DLL filenames)')
+    groupPlugin.add_argument('--plugin-x86-ansi-regex', type=str, help='optional regex to identify x86-ansi plugin DLL')
+    groupPlugin.add_argument('--plugin-x86-unicode-regex', type=str, help='optional regex to identify x86-unicode plugin DLL')
+    groupPlugin.add_argument('--plugin-amd64-unicode-regex', type=str, help='optional regex to identify amd64-unicode plugin DLL')
+    groupPlugin.add_argument('--plugin-ignore-regex', type=str, help='optional regex to ignore certain files or directories')
+
+    groupNsis = parser.add_argument_group('NSIS installation options')
+    groupNsis.add_argument('--nsis-directory', type=str, action='append', help='NSIS installation directory to use. By default, the NSIS plugin is installed into all NSIS installations found on the system. This option can be specified multiple times.')
+    groupNsis.add_argument('--nsis-overwrite-newer', action='store_true', help='overwrite target files even if they are newer than the source files (default: False)')
+
+    args = parser.parse_args()
 
     if args.verbose:
         verbose = True
 
-    for makensis, instdir in (list := nsis_list()):
-        arch = pe_architecture(makensis) if os.name == 'nt' else 'amd64'
-        print(f'Found nsis/{nsis_version(makensis)}-{arch} "{makensis}" / "{instdir}"')
-    if not list:
-        print('No NSIS installations found')
+    nsis_install_plugin(args.__dict__)
