@@ -526,12 +526,13 @@ def nsis_install_plugin_files(instdir, plugindir, input={}):
         # determine target architecture
         charset = None
         for regex in [r'.*unicode.*']:
-            if re.match(regex, relfile, re.IGNORECASE):
+            # note: exclude the file name, only look at the directory path (e.g. plugin "unicode.dll" would always match unicode)
+            if re.match(regex, os.path.dirname(relfile), re.IGNORECASE):
                 charset = 'unicode'
                 break
         if charset is None:
             for regex in [r'.*ansi.*']:
-                if re.match(regex, relfile, re.IGNORECASE):
+                if re.match(regex, os.path.dirname(relfile), re.IGNORECASE):
                     charset = 'ansi'
                     break
         if charset is None and len(plugin_files) == 2:
