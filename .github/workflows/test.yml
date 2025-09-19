@@ -74,6 +74,8 @@ jobs:
         uses: ./    # use ./action.yml
 
       - name: Verify
+        env:
+          GITHUB_TOKEN: ${{secrets.PUBLIC_ACCESS}}  # "github-public-read" token
         shell: python
         run: |
           import glob, os, sys
@@ -111,6 +113,8 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install NSIS plugins (overwrite newer)
+        env:
+          GITHUB_TOKEN: ${{secrets.PUBLIC_ACCESS}}  # "github-public-read" token
         shell: python
         run: |
           import glob, os, sys

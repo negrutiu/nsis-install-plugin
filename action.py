@@ -9,6 +9,7 @@ tempdir = os.path.join(scriptdir, 'runtime')
 downloadsdir = os.path.join(tempdir, 'downloads')
 pluginsdir = os.path.join(tempdir, 'plugins')
 modulesdir = os.path.join(scriptdir, 'runtime', 'modules')        # directory for temporary modules
+githubtoken = os.environ.get('GITHUB_TOKEN', None)  # GitHub token for higher API rate limits (https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limiting)
 
 
 # GitHub Actions sets RUNNER_DEBUG=1 when debug logging is enabled
@@ -31,6 +32,9 @@ def download_github_asset(owner, repo, tag, name_regex, outdir, headers={}):
     asset_url = None
     asset_size = None
     asset_path = None
+
+    if githubtoken and 'Authorization' not in headers:
+        headers['Authorization'] = f'token {githubtoken}'
 
     if verbose: print(f'Listing assets from "{url}"')
     t0 = datetime.datetime.now()
