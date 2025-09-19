@@ -439,10 +439,7 @@ def nsis_install_plugin_files(instdir, plugindir, input={}):
     if input is None: input = {}
 
     mandatory_directories = ['Bin', 'Contrib', 'Docs', 'Examples', 'Include', 'Plugins', 'Stubs']
-    if os.name == 'nt':
-        mandatory_files = ['makensis.exe', 'makensisw.exe', 'bin/makensis.exe']
-    else:
-        mandatory_files = ['makensis', 'genpat', 'bin/makensisw.exe']
+    mandatory_files = [os.path.join('Stubs', 'uninst')]
     for dir in mandatory_directories:
         absdir = os.path.join(instdir, dir)
         assert os.path.exists(absdir) and os.path.isdir(absdir), f'Invalid NSIS installation directory: "{instdir}" (missing "{dir}")'
@@ -643,7 +640,7 @@ def nsis_install_plugin_files(instdir, plugindir, input={}):
 
 def nsis_install_plugin(input):
     """ Main function to download and install a NSIS plugin. """
-    
+
     if verbose:
         print(f'Input: {input}')
 
