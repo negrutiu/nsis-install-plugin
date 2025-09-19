@@ -45,7 +45,7 @@ jobs:
               print(f'-- {file}', flush=True)
           print('--------------------------------------------------------------------------------', flush=True)
           print('>> 7-zip', flush=True)
-          os.system('7z')
+          os.system('7z i')
           print('--------------------------------------------------------------------------------', flush=True)
           print('>> makensis', flush=True)
           os.system('makensis -VERSION')
