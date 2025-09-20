@@ -111,17 +111,18 @@ def import_temp_module(modname):
 
 def find_7z():
     """ Find 7z.exe in the system PATH or common installation directories. Returns the path to 7z.exe or None if not found. """
-    paths = []
     if os.name == 'nt':
-        paths += [
-            os.path.join(os.environ.get('ProgramFiles', r'C:\Program Files'), '7-Zip'),
-            os.path.join(os.environ.get('ProgramFiles(x86)', r'C:\Program Files (x86)'), '7-Zip'),
-            ]
-    paths += os.environ.get('PATH', '').split(os.pathsep)
-
-    for path in paths:
-        file = os.path.join(path, '7z.exe' if os.name == 'nt' else '7z')
-        if os.path.isfile(file) and os.access(file, os.X_OK):
+        path = \
+            os.path.expandvars('%ProgramFiles%\\7-Zip') + os.pathsep + \
+            os.path.expandvars('%ProgramFiles(x86)%\\7-Zip') + os.pathsep + \
+            os.environ.get('PATH', '')
+        if file := shutil.which('7z.exe', path=path):
+            return file
+    else:
+        # on posix prefer 7zz (from "7zip" on ubuntu, "sevenzip" on macos) over 7z (from deprecated "p7zip")
+        if file := shutil.which('7zz'):
+            return file
+        if file := shutil.which('7z'):
             return file
     return None
 
@@ -130,18 +131,19 @@ def extract_archive(archive, outdir):
     if not os.path.exists(archive):
         raise FileNotFoundError(f'"{archive}" not found')
 
-    if (zip7 := find_7z()) is not None:
+    # use 7z/7zz if available (supports more formats than built-in modules)
+    if (sevenzip := find_7z()) is not None:
         try:
-            args = [zip7, 'x', '-y', f'-o{outdir}', archive]
+            args = [sevenzip, 'x', '-y', f'-o{outdir}', archive]
             os.makedirs(os.path.dirname(outdir), exist_ok=True)
-            if sys.platform == 'darwin':
-                subprocess.check_call(args) # show output
-            else:
+            try:
                 subprocess.check_call(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except:
+                subprocess.check_call(args)     # retry with output, useful for debugging
             if verbose: print(f'Command {args} returned 0')
             return
         except Exception as ex:
-            print(f'{ex}')
+            print(f'Warning: {ex}')
 
     if os.path.splitext(archive)[1].lower() == '.zip':
         # only built-in zip methods ("Deflate", "Store") are supported

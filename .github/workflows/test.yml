@@ -112,6 +112,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      # on macOS, the pre-installed p7zip is too old to extract from NSIS LZMA executables
+      - name: Update 7-zip (macos)
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install sevenzip
+          7zz i
+
       - name: Install NSIS plugins (overwrite newer)
         env:
           GITHUB_TOKEN: ${{secrets.PUBLIC_ACCESS}}  # "github-public-read" token
