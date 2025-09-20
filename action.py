@@ -402,8 +402,9 @@ def nsis_list():
                 assert os.name == 'posix'
                 instdir = '/usr/share/nsis'
                 assert os.path.exists(instdir) and os.path.isdir(instdir), f'Invalid NSIS share directory: "{instdir}"'
-            elif os.path.basename(instdir).casefold() == 'bin':
-                instdir = os.path.dirname(instdir)  # /opt/homebrew/Cellar/makensis/3.11/bin -> /opt/homebrew/Cellar/makensis/3.11
+            elif os.path.basename(instdir).casefold() == 'bin' and sys.platform == 'darwin':
+                instdir = os.path.dirname(instdir)  # /opt/homebrew/Cellar/makensis/3.11/bin -> /opt/homebrew/Cellar/makensis/3.11/share/nsis
+                instdir += '/share/nsis'
                 assert os.path.exists(instdir) and os.path.isdir(instdir), f'Invalid NSIS share directory: "{instdir}"'
 
             unique = True
