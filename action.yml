@@ -2,12 +2,75 @@ name: Install NSIS plugin
 description: Install generic NSIS plugins on GitHub runners.
 
 inputs:
-  dummy:
-    default: ''
+
+  # NSIS plugin hosted on GitHub
+  github-owner:
     required: false
-    description: Dummy input
+    description: GitHub owner (user or organization) of the repository containing the NSIS plugin (e.g. "negrutiu")
+  github-repo:
+    required: false
+    description: GitHub repository name containing the NSIS plugin (e.g. "nsis-nscurl")
+  github-tag:
+    required: false
+    description: Git tag, branch or commit (default "latest")
+  github-asset-regex:
+    required: false
+    description: Regular expression to match the asset name (e.g. "NScurl\.zip")
+  github-token:
+    required: false
+    description: GitHub token with permission to access the repository. If not provided, the GITHUB_TOKEN environment variable will be used.
+  
+  # NSIS plugin hosted on a web server
+  url:
+    required: false
+    description: URL of the NSIS plugin archive (e.g. "https://nsis.sourceforge.io/mediawiki/images/3/35/ShutdownAllow.zip")
+
+  # NSIS plugin package details
+  plugin-name:
+    required: false
+    description: |
+      Optional name of the NSIS plugin (e.g. "NScurl", "ShutdownAllow").
+      If not provided, the name will be inferred from plugin DLL files.
+  plugin-x86-ansi-regex:
+    required: false
+    description: |
+      Optional regex to match the x86-ansi plugin DLL file.
+      If not provided, the action will try identify the file automatically.
+      All regexes are case-insensitive and matched against the relative path in the archive (e.g. "Plugins/x86-unicode/plugin.dll").
+  plugin-x86-unicode-regex:
+    required: false
+    description: |
+      Optional regex to match the x86-unicode plugin DLL file.
+      If not provided, the action will try identify the file automatically.
+  plugin-amd64-unicode-regex:
+    required: false
+    description: |
+      Optional regex to match the amd64-unicode plugin DLL file.
+      If not provided, the action will try identify the file automatically.
+  plugin-ignore-regex:
+    required: false
+    description: |
+      Optional regex to ignore certain files in the archive (e.g. ".*Debug.*")
+      All regexes are case-insensitive and matched against the relative path in the archive (e.g. "Plugins/x86-unicode/plugin.dll").
+
+  # NSIS installation options
+  nsis-directory:
+    required: false
+    description: |
+      Optional path to the NSIS installation directory (e.g. "C:\Program Files (x86)\NSIS", "/usr/share/nsis").
+      If not provided, the NSIS plugin is installed into all NSIS installations found on the system.
+
+  nsis-overwrite-newer:
+    required: false
+    default: 'false'
+    description: |
+      If true, always overwrite existing plugin files.
+      If false, overwrite existing plugin files only if the new files are newer.
+      The action identifies newer files based on the TimeDateStamp value in the PE file header.
+      Default is false.
 
 outputs:
+
   dummy:
     description: Dummy output
     value: ${{steps.install.outputs.dummy}}
@@ -23,20 +86,50 @@ runs:
       id: install
       shell: python
       run: |
-        import os, sys
-        if os.getenv('GITHUB_ACTION_PATH', ''):
-          sys.path.insert(0, os.getenv('GITHUB_ACTION_PATH'))
-        elif os.getenv('GITHUB_WORKSPACE', ''):
-          sys.path.insert(0, os.getenv('GITHUB_WORKSPACE'))
-        from action import *
+        import os, subprocess, sys
 
-        # list existing NSIS installations
-        for makensis, instdir in nsis_list():
-          arch = pe_architecture(makensis) if os.name == 'nt' else 'amd64'
-          print(f'Found "{makensis}", "{instdir}", ver:{nsis_version(makensis)}, arch:{arch}')
+        repodir = None
+        if not repodir:
+          repodir = os.getenv('GITHUB_ACTION_PATH', '')
+        if not repodir:
+          repodir = os.getenv('GITHUB_WORKSPACE', '')
+        assert repodir, 'Cannot determine repository directory'
 
         # download and install NSIS plugin
-        # todo
+        args = [sys.executable, os.path.join(repodir, 'action.py')]
+
+        if (param := r'${{inputs.github-owner}}') != '':
+          args += [f'--github-owner={param}']
+        if (param := r'${{inputs.github-repo}}') != '':
+          args += [f'--github-repo={param}']
+        if (param := r'${{inputs.github-tag}}') != '':
+          args += [f'--github-tag={param}']
+        if (param := r'${{inputs.github-asset-regex}}') != '':
+          args += [f'--github-asset-regex={param}']
+        if (param := r'${{inputs.github-token}}') != '':
+          args += [f'--github-token={param}']
+
+        if (param := r'${{inputs.url}}') != '':
+          args += [f'--url={param}']
+
+        if (param := r'${{inputs.plugin-name}}') != '':
+          args += [f'--plugin-name={param}']
+        if (param := r'${{inputs.plugin-x86-ansi-regex}}') != '':
+          args += [f'--plugin-x86-ansi-regex={param}']
+        if (param := r'${{inputs.plugin-x86-unicode-regex}}') != '':
+          args += [f'--plugin-x86-unicode-regex={param}']
+        if (param := r'${{inputs.plugin-amd64-unicode-regex}}') != '':
+          args += [f'--plugin-amd64-unicode-regex={param}']
+        if (param := r'${{inputs.plugin-ignore-regex}}') != '':
+          args += [f'--plugin-ignore-regex={param}']
+
+        if (param := r'${{inputs.nsis-directory}}') != '':
+          args += [f'--nsis-directory={param}']
+        if (param := r'${{inputs.nsis-overwrite-newer}}') != '' and param.lower() == 'true':
+          args += [f'--nsis-overwrite-newer']
+
+        print(f'Running: {args}', flush=True)
+        subprocess.check_call(args)
 
         # outputs
         with open(os.getenv('GITHUB_OUTPUT'), "a") as f:

@@ -71,9 +71,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Install NSIS plugin
-        id: install
+      - name: Install `NScurl` from GitHub
+        id: install-nscurl
         uses: ./    # use ./action.yml
+        with:
+          github-owner: negrutiu
+          github-repo: nsis-nscurl
+          github-tag: latest
+          github-asset-regex: NScurl\.zip
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          nsis-overwrite-newer: true
+
+      - name: Install `ShutdownAllow` from web
+        id: install-shutdownallow
+        uses: ./    # use ./action.yml
+        with:
+          url: https://nsis.sourceforge.io/mediawiki/images/3/35/ShutdownAllow.zip
+          nsis-overwrite-newer: true
 
       - name: Verify
         shell: python
@@ -95,7 +109,8 @@ jobs:
                 print(f'{file}{"[" + version + "]" if version is not None else ""}', flush=True)
             print('--------------------------------------------------------------------------------', flush=True)
 
-          print(rf'dummy = "${{steps.install.outputs.dummy}}"', flush=True)
+          print(rf'install-nscurl.outputs.dummy = "${{steps.install-nscurl.outputs.dummy}}"', flush=True)
+          print(rf'install-shutdownallow.outputs.dummy = "${{steps.install-shutdownallow.outputs.dummy}}"', flush=True)
 
   # --------------------------------------------------------------------------------
 
