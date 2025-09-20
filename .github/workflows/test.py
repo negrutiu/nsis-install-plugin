@@ -4,10 +4,10 @@ scriptdir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(os.path.dirname(scriptdir)))
 import action    # ../../action.py
 
-tempdir = os.path.join(scriptdir, 'runtime')
-action.downloadsdir = os.path.join(tempdir, 'downloads')    # override
-action.pluginsdir = os.path.join(tempdir, 'plugins')        # override
-action.modulesdir = os.path.join(tempdir, 'modules')        # override
+action.tempdir = os.path.join(scriptdir, 'runtime')                 # override
+action.downloadsdir = os.path.join(action.tempdir, 'downloads')
+action.pluginsdir = os.path.join(action.tempdir, 'plugins')
+action.modulesdir = os.path.join(action.tempdir, 'modules')
 
 def print_line(char='-', length=80, suffix=''):
     print(char * length + suffix)
@@ -24,7 +24,7 @@ def test_nsis_list(force_download=False, force_extract=False):
         ]
     
     for owner, repo, tag, regex, dirname in github_sources:
-        instdir = os.path.join(tempdir, 'nsis', dirname)
+        instdir = os.path.join(action.tempdir, 'nsis', dirname)
         if force_extract:
             shutil.rmtree(instdir, ignore_errors=True)  # delete and re-extract
         if not os.path.exists(instdir):
@@ -43,7 +43,7 @@ def test_nsis_list(force_download=False, force_extract=False):
         nsis_list.append((makensisexe, instdir))
 
     for url, regex, dirname in web_sources:
-        instdir = os.path.join(tempdir, 'nsis', dirname)
+        instdir = os.path.join(action.tempdir, 'nsis', dirname)
         if force_extract:
             shutil.rmtree(instdir, ignore_errors=True)  # delete and re-extract
         if not os.path.exists(instdir):

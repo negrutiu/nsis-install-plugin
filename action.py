@@ -417,6 +417,7 @@ def nsis_list():
 
     return installations
 
+
 def format_path(file, basedir=None):
     assert file, 'file is None'
     properties = []
