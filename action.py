@@ -18,6 +18,25 @@ if verbose := (os.environ.get("RUNNER_DEBUG", default="0") == "1"):
     print(f'Platform: os.name="{os.name}", sys.platform="{sys.platform}"')
 
 
+def import_temp_module(modname):
+    """ Import module, installing it to a temporary location if necessary. """
+    moduledir = None
+    try:
+        globals()[modname] = importlib.import_module(modname)
+    except ImportError:
+        moduledir = os.path.join(modulesdir, modname)
+        if not os.path.exists(moduledir):
+            print(f'Install {modname} into temporary directory {moduledir}')
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "--target", moduledir, modname])
+        print(f'Import "{os.path.relpath(moduledir, tempdir)}"')
+        sys.path.insert(0, moduledir)
+        globals()[modname] = importlib.import_module(modname)
+        if modname == 'pefile':
+            pefile.fast_load = True
+
+    return moduledir
+
+
 def download_github_asset(owner, repo, tag, name_regex, token, outdir):
     """
     Download a GitHub release asset matching the specified regex.
@@ -105,22 +124,6 @@ def download_file(url, outdir, headers={}):
                 print(f'  Request headers {http_request.header_items()}')
                 print(f'  Response headers {http.getheaders()}')
         return filepath
-
-
-def import_temp_module(modname):
-    """ Import module, installing it to a temporary location if necessary. """
-    try:
-        globals()[modname] = importlib.import_module(modname)
-    except ImportError:
-        moduledir = os.path.join(modulesdir, modname)
-        if not os.path.exists(moduledir):
-            print(f'Install {modname} into temporary directory {moduledir}')
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "--target", moduledir, modname])
-        print(f'Import "{moduledir}"')
-        sys.path.insert(0, moduledir)
-        globals()[modname] = importlib.import_module(modname)
-        return moduledir
-    return None
 
 
 def find_7z():
@@ -416,6 +419,7 @@ def nsis_list():
                 installations.append((makensis, instdir))
 
     return installations
+
 
 def format_path(file, basedir=None):
     assert file, 'file is None'

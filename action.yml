@@ -94,6 +94,7 @@ runs:
         if not repodir:
           repodir = os.getenv('GITHUB_WORKSPACE', '')
         assert repodir, 'Cannot determine repository directory'
+        repodir = os.path.normpath(os.path.abspath(repodir))
 
         # download and install NSIS plugin
         args = ['sudo'] if sys.platform == 'linux' else []
