@@ -178,7 +178,7 @@ def pe_architecture(path):
     import_temp_module('pefile')
 
     machine = -1
-    with pefile.PE(path) as pe:
+    with pefile.PE(path, fast_load=True) as pe:
         machine = pe.FILE_HEADER.Machine
 
     # https://learn.microsoft.com/en-us/windows/win32/sysinfo/image-file-machine-constants
@@ -204,7 +204,7 @@ def pe_version(path, product=False):
 def pe_header_datetime(path):
     """ Return the PE header timestamp as a `datetime` object or `None`. """
     import_temp_module('pefile')
-    with pefile.PE(path) as pe:
+    with pefile.PE(path, fast_load=True) as pe:
         timestamp = pe.FILE_HEADER.TimeDateStamp
         if timestamp != 0:
             return datetime.datetime.fromtimestamp(timestamp)
@@ -774,5 +774,8 @@ Examples:
 
     if args.verbose:
         verbose = True
+
+    import_temp_module('pefile')
+    pefile.fast_load = True     # https://pefile.readthedocs.io/en/latest/modules/pefile.html
 
     nsis_install_plugin(args.__dict__)
