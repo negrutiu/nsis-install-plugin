@@ -9,7 +9,6 @@ tempdir = os.path.join(scriptdir, 'runtime')
 downloadsdir = os.path.join(tempdir, 'downloads')
 pluginsdir = os.path.join(tempdir, 'plugins')
 modulesdir = os.path.join(scriptdir, 'runtime', 'modules')        # directory for temporary modules
-githubtoken = os.environ.get('GITHUB_TOKEN', None)  # GitHub token for higher API rate limits (https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limiting)
 
 
 # GitHub Actions sets RUNNER_DEBUG=1 when debug logging is enabled
@@ -19,7 +18,7 @@ if verbose := (os.environ.get("RUNNER_DEBUG", default="0") == "1"):
     print(f'Platform: os.name="{os.name}", sys.platform="{sys.platform}"')
 
 
-def download_github_asset(owner, repo, tag, name_regex, outdir, headers={}):
+def download_github_asset(owner, repo, tag, name_regex, token, outdir):
     """
     Download a GitHub release asset matching the specified regex.
     Returns the path to the downloaded file.
@@ -33,18 +32,24 @@ def download_github_asset(owner, repo, tag, name_regex, outdir, headers={}):
     asset_size = None
     asset_path = None
 
-    if githubtoken and 'Authorization' not in headers:
-        headers['Authorization'] = f'token {githubtoken}'
+    # GITHUB_TOKEN is optional, but recommended to avoid rate limiting
+    if not token:
+        token = os.environ.get('GITHUB_TOKEN', None)    # fallback to environment variable
 
     if verbose: print(f'Listing assets from "{url}"')
     t0 = datetime.datetime.now()
     ssl_context = ssl.create_default_context(cafile=certifi.where())
-    http_request = request.Request(url, headers=headers)
+    http_request = request.Request(url)
+    http_request.add_header('Accept', 'application/vnd.github.v3+json')
+    if token:
+        http_request.add_header('Authorization', f'Bearer {token}')
     with request.urlopen(http_request, context=ssl_context) as http:
         import json
         response_json = json.loads(http.read().decode('utf-8'))
         if verbose:
             print(f'  HTTP {http.status} {http.reason}, {int((datetime.datetime.now()-t0).total_seconds()*1000)} ms')
+            print(f'  Request headers {http_request.header_items()}')
+            print(f'  Response headers {http.getheaders()}')
             for asset in response_json['assets']:
                 print(f'> asset: "{asset["name"]}", {asset["size"]} bytes, {asset["browser_download_url"]}')
         for asset in response_json['assets']:
@@ -63,13 +68,19 @@ def download_github_asset(owner, repo, tag, name_regex, outdir, headers={}):
 
     print(f'Downloading {asset_url} to "{outdir}"')
     t0 = datetime.datetime.now()
-    http_request = request.Request(asset_url, headers=headers)
+    http_request = request.Request(asset_url)
+    http_request.add_header('Accept', 'application/octet-stream')
+    if token:
+        http_request.add_header('Authorization', f'Bearer {token}')
     with request.urlopen(http_request, context=ssl_context) as http:
         if not os.path.exists(outdir):
             os.makedirs(outdir, exist_ok=True)
         with open(asset_path, 'wb') as file:
             shutil.copyfileobj(http, file)
-            if verbose: print(f'  HTTP {http.status} {http.reason}, {int((datetime.datetime.now()-t0).total_seconds()*1000)} ms')
+            if verbose:
+                print(f'  HTTP {http.status} {http.reason}, {int((datetime.datetime.now()-t0).total_seconds()*1000)} ms')
+                print(f'  Request headers: {http_request.header_items()}')
+                print(f'  Response headers: {http.getheaders()}')
         return asset_path
 
 
@@ -89,7 +100,10 @@ def download_file(url, outdir, headers={}):
             os.makedirs(outdir, exist_ok=True)
         with open(filepath, 'wb') as file:
             shutil.copyfileobj(http, file)
-            if verbose: print(f'  HTTP {http.status} {http.reason}, {int((datetime.datetime.now()-t0).total_seconds()*1000)} ms')
+            if verbose:
+                print(f'  HTTP {http.status} {http.reason}, {int((datetime.datetime.now()-t0).total_seconds()*1000)} ms')
+                print(f'  Request headers {http_request.header_items()}')
+                print(f'  Response headers {http.getheaders()}')
         return filepath
 
 
@@ -230,6 +244,7 @@ def pe_imports_charset_count(path):
                                 ansi_count += 1
     return (ansi_count, wide_count)
 
+
 def pe_imports_module_list(path):
     """ Return a list of imported modules in a PE file (e.g. `['kernel32.dll', 'user32.dll']`) """
     import_temp_module('pefile')
@@ -251,6 +266,7 @@ def pe_section_name_list(path):
         for section in pe.sections:
             section_list.append(section.Name.decode(errors='ignore'))
     return section_list
+
 
 def pe_print_debug_entries(path):
     IMAGE_DEBUG_TYPE_COFF = 1
@@ -684,12 +700,13 @@ def nsis_install_plugin(input):
     # download plugin
     github_owner = input.get('github_owner', None)
     github_repo  = input.get('github_repo', None)
-    github_tag   = input.get('github_tag', 'latest')
+    github_tag   = input.get('github_tag', 'latest')    # optional, default: latest
     github_asset_regex = input.get('github_asset_regex', None)
+    github_token = input.get('github_token', None)      # optional
     url = input.get('url', None)
     pluginzip = None
     if github_owner and github_repo and github_tag and github_asset_regex:
-        pluginzip = download_github_asset(github_owner, github_repo, github_tag, github_asset_regex, downloadsdir)
+        pluginzip = download_github_asset(github_owner, github_repo, github_tag, github_asset_regex, github_token, downloadsdir)
     elif url:
         pluginzip = download_file(url, downloadsdir)
     else:
@@ -736,6 +753,7 @@ Examples:
     groupGitHub.add_argument('--github-repo', type=str, help='github repository')
     groupGitHub.add_argument('--github-tag', type=str, default='latest', help='github release tag (default: "latest")')
     groupGitHub.add_argument('--github-asset-regex', type=str, help='regex to match github release asset name (e.g. "plugin\\.zip")')
+    groupGitHub.add_argument('--github-token', type=str, help='optional (but highly recommended) github token to increase the rate limit')
 
     groupWeb = parser.add_argument_group('Web', 'Download a NSIS plugin from a web URL')
     groupWeb.add_argument('--url', type=str, help='URL to download a file')

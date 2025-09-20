@@ -13,6 +13,8 @@ jobs:
 
   basic-tests:
     name: Basic Tests
+    permissions:
+      contents: read    # GITHUB_TOKEN permission to read repository contents
     strategy:
       fail-fast: false
       matrix:
@@ -74,8 +76,6 @@ jobs:
         uses: ./    # use ./action.yml
 
       - name: Verify
-        env:
-          GITHUB_TOKEN: ${{secrets.PUBLIC_ACCESS}}  # "github-public-read" token
         shell: python
         run: |
           import glob, os, sys
@@ -101,6 +101,8 @@ jobs:
 
   advanced-tests:
     name: Advanced Tests
+    permissions:
+      contents: read    # GITHUB_TOKEN permission to read repository contents
     strategy:
       fail-fast: false
       matrix:
@@ -122,12 +124,12 @@ jobs:
 
       - name: Install NSIS plugins (overwrite newer)
         env:
-          GITHUB_TOKEN: ${{secrets.PUBLIC_ACCESS}}  # "github-public-read" token
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}   # required by action.py to download GitHub assets
         shell: python
         run: |
           import glob, os, sys
           sys.path.insert(0, os.path.join(r'${{github.workspace}}', '.github', 'workflows'))
-          import test
+          import test   # .github/workflows/test.py
 
           print('Preparing temporary NSIS installations...')
           test.test_nsis_list()
@@ -142,6 +144,8 @@ jobs:
           assert copied > 0, 'No files were copied in the first round, something is wrong!'
 
       - name: Install NSIS plugins (no overwrite)
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}   # required by action.py to download GitHub assets
         shell: python
         run: |
           import glob, os, sys

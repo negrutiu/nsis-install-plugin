@@ -36,7 +36,7 @@ def test_nsis_list(force_download=False, force_extract=False):
                     else:
                         setupexe = file     # use this file
             if not setupexe:
-                setupexe = action.download_github_asset(owner, repo, tag, regex, action.downloadsdir)
+                setupexe = action.download_github_asset(owner, repo, tag, regex, None, action.downloadsdir)
                 action.extract_archive(setupexe, instdir)
         makensisexe = os.path.join(instdir, 'makensis.exe')
         assert os.path.isfile(makensisexe), f'File not found: {makensisexe}'
