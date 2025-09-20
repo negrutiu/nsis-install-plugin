@@ -26,7 +26,9 @@ jobs:
       - name: Install NSIS (ubuntu)
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get install -y nsis
+          # "man-db" slows down the installation of "nsis" a lot
+          sudo apt remove -y man-db
+          sudo apt install -y nsis
           dpkg -L nsis
 
       - name: Install NSIS (macOS)
@@ -78,6 +80,8 @@ jobs:
             for file in glob.glob('/usr/share/nsis/**', recursive=True):
               if os.path.isfile(file):
                 print(f'-- {file}', flush=True)
+            print('--------------------------------------------------------------------------------', flush=True)
+            os.system('ls -laR /usr/share/nsis')
           print('--------------------------------------------------------------------------------', flush=True)
 
       - name: Checkout repository
