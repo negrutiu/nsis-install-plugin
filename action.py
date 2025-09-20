@@ -464,14 +464,11 @@ def nsis_install_plugin_files(instdir, plugindir, input={}):
     print(f'Installing plugin from "{plugindir}" into "{instdir}"')
     if input is None: input = {}
 
-    mandatory_directories = ['Bin', 'Contrib', 'Docs', 'Examples', 'Include', 'Plugins', 'Stubs']
-    mandatory_files = [os.path.join('Stubs', 'uninst')]
+    # mandatory_directories = ['Bin', 'Contrib', 'Docs', 'Examples', 'Include', 'Plugins', 'Stubs']
+    mandatory_directories = ['Include', 'Plugins', 'Stubs']
     for dir in mandatory_directories:
         absdir = os.path.join(instdir, dir)
         assert os.path.exists(absdir) and os.path.isdir(absdir), f'Invalid NSIS installation directory: "{instdir}" (missing "{dir}")'
-    for file in mandatory_files:
-        absfile = os.path.join(instdir, file)
-        assert os.path.exists(absfile) and os.path.isfile(absfile), f'Invalid NSIS installation directory: "{instdir}" (missing "{file}")'
     
     # collect all .dll files and classify them by architecture and charset
     def should_ignore(relpath):
