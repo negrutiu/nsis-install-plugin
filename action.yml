@@ -98,7 +98,7 @@ runs:
 
         # download and install NSIS plugin
         args = ['sudo'] if sys.platform == 'linux' else []
-        args += [sys.executable, os.path.join(repodir, 'action.py')]
+        args += [sys.executable, '-O', os.path.join(repodir, 'action.py')]
 
         if (param := r'${{inputs.github-owner}}') != '':
           args += [f'--github-owner={param}']
