@@ -200,37 +200,40 @@ def extract_archive(archive, outdir):
 
 def pe_architecture(path):
     """ Return the architecture of a PE file (`x86`, `amd64`, `arm64`, `ia64`) or `None`. """
-    import_temp_module('pefile')
-
-    machine = -1
-    with pefile.PE(path, fast_load=True) as pe:
-        machine = pe.FILE_HEADER.Machine
-
-    # https://learn.microsoft.com/en-us/windows/win32/sysinfo/image-file-machine-constants
-    machines = {0x014c: 'x86', 0x8664: 'amd64', 0xaa64: 'arm64', 0x0200: 'ia64'}
-    return machines.get(machine, None)
+    config = lief.PE.ParserConfig()
+    config.parse_exports = config.parse_imports = config.parse_reloc = config.parse_rsrc = config.parse_signature = False
+    if pe := lief.PE.parse(path, config):
+        assert isinstance(pe, lief.PE.Binary)
+        # https://learn.microsoft.com/en-us/windows/win32/sysinfo/image-file-machine-constants
+        machines = {0x014c: 'x86', 0x8664: 'amd64', 0xaa64: 'arm64', 0x0200: 'ia64'}
+        return machines.get(pe.header.machine.value, None)
+    return None
 
 
 def pe_version(path, product=False):
-    """ Return the file or product version of a PE file or `None`. """
-    import_temp_module('pefile')
-    with pefile.PE(path) as pe:
-        if 'VS_FIXEDFILEINFO' in pe.__dict__:
-            if len(pe.VS_FIXEDFILEINFO) > 0:
-                verinfo = pe.VS_FIXEDFILEINFO[0]
+    """ Return the file/product version of a PE file or `None`. """
+    config = lief.PE.ParserConfig()
+    config.parse_exports = config.parse_imports = config.parse_reloc = config.parse_signature = False
+    config.parse_rsrc = True
+    if pe := lief.PE.parse(path, config):
+        assert isinstance(pe, lief.PE.Binary)
+        if pe.has_resources:
+            if pe.resources_manager.has_version:
+                version = pe.resources_manager.version[0].file_info
                 if product:
-                    return f'{verinfo.ProductVersionMS >> 16}.{verinfo.ProductVersionMS & 0xFFFF}.{verinfo.ProductVersionLS >> 16}.{verinfo.ProductVersionLS & 0xFFFF}'
+                    return f'{version.product_version_ms >> 16}.{version.product_version_ms & 0xFFFF}.{version.product_version_ls >> 16}.{version.product_version_ls & 0xFFFF}'
                 else:
-                    return f'{verinfo.FileVersionMS >> 16}.{verinfo.FileVersionMS & 0xFFFF}.{verinfo.FileVersionLS >> 16}.{verinfo.FileVersionLS & 0xFFFF}'
+                    return f'{version.file_version_ms >> 16}.{version.file_version_ms & 0xFFFF}.{version.file_version_ls >> 16}.{version.file_version_ls & 0xFFFF}'
     return None
 
 
 def pe_header_datetime(path):
     """ Return the PE header timestamp as a `datetime` object or `None`. """
-    import_temp_module('pefile')
-    with pefile.PE(path, fast_load=True) as pe:
-        timestamp = pe.FILE_HEADER.TimeDateStamp
-        return datetime.datetime.fromtimestamp(timestamp)
+    config = lief.PE.ParserConfig()
+    config.parse_exports = config.parse_imports = config.parse_reloc = config.parse_rsrc = config.parse_signature = False
+    if pe := lief.PE.parse(path, config):
+        assert isinstance(pe, lief.PE.Binary)
+        return datetime.datetime.fromtimestamp(pe.header.time_date_stamps)
     return None
 
 
@@ -248,50 +251,58 @@ def pe_imports_charset_count(path):
     Returns:
         tuple: (ansi_count, wide_count)
     """
-    import_temp_module('pefile')
-
     ansi_count = 0
     wide_count = 0
 
-    with pefile.PE(path) as pe:
-        if hasattr(pe, 'DIRECTORY_ENTRY_IMPORT'):
-            for entry in pe.DIRECTORY_ENTRY_IMPORT:
-                # dll_name = entry.dll.decode(errors='ignore')
-                for imp in entry.imports:
-                    # imp.name is None if imp.import_by_ordinal is True
-                    if imp.name is not None and (func_name := imp.name.decode(errors='ignore')):
-                        if len(func_name) >= 2 and func_name[-2].islower():
-                            if func_name[-1] == 'W':
+    config = lief.PE.ParserConfig()
+    config.parse_exports = config.parse_reloc = config.parse_rsrc = config.parse_signature = False
+    config.parse_imports = True
+    if pe := lief.PE.parse(path, config):
+        assert isinstance(pe, lief.PE.Binary)
+        if pe.has_imports:
+            for module in pe.imports:
+                for func in module.entries:
+                    if not func.is_ordinal:
+                        # print(f'-- {module.name}!{func.name}')
+                        if len(func.name) >= 2 and func.name[-2].islower():
+                            if func.name[-1] == 'W':
                                 wide_count += 1
-                            elif func_name[-1] == 'A':
+                            elif func.name[-1] == 'A':
                                 ansi_count += 1
+        
     return (ansi_count, wide_count)
 
 
 def pe_imports_module_list(path):
     """ Return a list of imported modules in a PE file (e.g. `['kernel32.dll', 'user32.dll']`) """
-    import_temp_module('pefile')
 
     module_list = []
-    with pefile.PE(path) as pe:
-        if hasattr(pe, 'DIRECTORY_ENTRY_IMPORT'):
-            for entry in pe.DIRECTORY_ENTRY_IMPORT:
-                module_list.append(entry.dll.decode(errors='ignore'))
+    config = lief.PE.ParserConfig()
+    config.parse_exports = config.parse_reloc = config.parse_rsrc = config.parse_signature = False
+    config.parse_imports = True
+    if pe := lief.PE.parse(path, config):
+        assert isinstance(pe, lief.PE.Binary)
+        if pe.has_imports:
+            for module in pe.imports:
+                module_list.append(module.name)
     return module_list
 
 
 def pe_section_name_list(path):
     """ Return a list of section names in a PE file (e.g. `['.text', '.rdata', '.data', '.rsrc', '.reloc']`) """
-    import_temp_module('pefile')
-
     section_list = []
-    with pefile.PE(path) as pe:
+    config = lief.PE.ParserConfig()
+    config.parse_exports = config.parse_imports = config.parse_reloc = config.parse_rsrc = config.parse_signature = False
+    if pe := lief.PE.parse(path, config):
+        assert isinstance(pe, lief.PE.Binary)
         for section in pe.sections:
-            section_list.append(section.Name.decode(errors='ignore'))
+            section_list.append(section.name)
     return section_list
 
 
 def pe_print_debug_entries(path):
+    import_temp_module('pefile')
+
     IMAGE_DEBUG_TYPE_COFF = 1
     IMAGE_DEBUG_TYPE_CODEVIEW = 2
     IMAGE_DEBUG_TYPE_VC_FEATURE = 12
@@ -756,6 +767,8 @@ def nsis_install_plugin(input):
     return copied
 
 
+import_temp_module('lief')
+
 if __name__ == '__main__':
 
     from argparse import ArgumentParser
@@ -798,8 +811,5 @@ Examples:
 
     if args.verbose:
         verbose = True
-
-    import_temp_module('pefile')
-    pefile.fast_load = True     # https://pefile.readthedocs.io/en/latest/modules/pefile.html
 
     nsis_install_plugin(args.__dict__)
