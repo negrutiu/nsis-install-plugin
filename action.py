@@ -191,13 +191,12 @@ def pe_version(path, product=False):
     import_temp_module('pefile')
     with pefile.PE(path) as pe:
         if 'VS_FIXEDFILEINFO' in pe.__dict__:
-            if pe.VS_FIXEDFILEINFO:
-                if len(pe.VS_FIXEDFILEINFO) > 0:
-                    verinfo = pe.VS_FIXEDFILEINFO[0]
-                    if product:
-                        return f'{verinfo.ProductVersionMS >> 16}.{verinfo.ProductVersionMS & 0xFFFF}.{verinfo.ProductVersionLS >> 16}.{verinfo.ProductVersionLS & 0xFFFF}'
-                    else:
-                        return f'{verinfo.FileVersionMS >> 16}.{verinfo.FileVersionMS & 0xFFFF}.{verinfo.FileVersionLS >> 16}.{verinfo.FileVersionLS & 0xFFFF}'
+            if len(pe.VS_FIXEDFILEINFO) > 0:
+                verinfo = pe.VS_FIXEDFILEINFO[0]
+                if product:
+                    return f'{verinfo.ProductVersionMS >> 16}.{verinfo.ProductVersionMS & 0xFFFF}.{verinfo.ProductVersionLS >> 16}.{verinfo.ProductVersionLS & 0xFFFF}'
+                else:
+                    return f'{verinfo.FileVersionMS >> 16}.{verinfo.FileVersionMS & 0xFFFF}.{verinfo.FileVersionLS >> 16}.{verinfo.FileVersionLS & 0xFFFF}'
     return None
 
 
@@ -206,8 +205,7 @@ def pe_header_datetime(path):
     import_temp_module('pefile')
     with pefile.PE(path, fast_load=True) as pe:
         timestamp = pe.FILE_HEADER.TimeDateStamp
-        if timestamp != 0:
-            return datetime.datetime.fromtimestamp(timestamp)
+        return datetime.datetime.fromtimestamp(timestamp)
     return None
 
 
