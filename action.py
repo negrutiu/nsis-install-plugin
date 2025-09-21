@@ -61,7 +61,6 @@ def download_github_asset(owner, repo, tag, name_regex, token, outdir):
     if not token:
         token = os.environ.get('GITHUB_TOKEN', None)    # fallback to environment variable
 
-    if verbose: print(f'Listing assets from "{url}"')
     t0 = datetime.datetime.now()
     ssl_context = ssl.create_default_context(cafile=certifi.where())
     http_request = request.Request(url)
@@ -71,10 +70,10 @@ def download_github_asset(owner, repo, tag, name_regex, token, outdir):
     with request.urlopen(http_request, context=ssl_context) as http:
         import json
         response_json = json.loads(http.read().decode('utf-8'))
+        print(f'GET {url} --> {http.status} {http.reason}, {int((datetime.datetime.now()-t0).total_seconds()*1000)} ms')
         if verbose:
-            print(f'  HTTP {http.status} {http.reason}, {int((datetime.datetime.now()-t0).total_seconds()*1000)} ms')
-            print(f'  Request headers {http_request.header_items()}')
-            print(f'  Response headers {http.getheaders()}')
+            print(f'    Request headers {http_request.header_items()}')
+            print(f'    Response headers {http.getheaders()}')
             for asset in response_json['assets']:
                 print(f'> asset: "{asset["name"]}", {asset["size"]} bytes, {asset["browser_download_url"]}')
         for asset in response_json['assets']:
@@ -91,7 +90,6 @@ def download_github_asset(owner, repo, tag, name_regex, token, outdir):
         print(f'Reuse existing "{asset_path}"')
         return asset_path
 
-    print(f'Downloading {asset_url} to "{outdir}"')
     t0 = datetime.datetime.now()
     http_request = request.Request(asset_url)
     http_request.add_header('Accept', 'application/octet-stream')
@@ -102,10 +100,10 @@ def download_github_asset(owner, repo, tag, name_regex, token, outdir):
             os.makedirs(outdir, exist_ok=True)
         with open(asset_path, 'wb') as file:
             shutil.copyfileobj(http, file)
+            print(f'GET {asset_url} --> {http.status} {http.reason}, {int((datetime.datetime.now()-t0).total_seconds()*1000)} ms')
             if verbose:
-                print(f'  HTTP {http.status} {http.reason}, {int((datetime.datetime.now()-t0).total_seconds()*1000)} ms')
-                print(f'  Request headers: {http_request.header_items()}')
-                print(f'  Response headers: {http.getheaders()}')
+                print(f'    Request headers: {http_request.header_items()}')
+                print(f'    Response headers: {http.getheaders()}')
         return asset_path
 
 
@@ -116,7 +114,6 @@ def download_file(url, outdir, headers={}):
         print(f'Reuse existing "{filepath}"')
         return filepath
 
-    print(f'Downloading {url} to "{outdir}"')
     t0 = datetime.datetime.now()
     ssl_context = ssl.create_default_context(cafile=certifi.where())
     http_request = request.Request(url, headers=headers)
@@ -125,10 +122,10 @@ def download_file(url, outdir, headers={}):
             os.makedirs(outdir, exist_ok=True)
         with open(filepath, 'wb') as file:
             shutil.copyfileobj(http, file)
+            print(f'GET {url} --> {http.status} {http.reason}, {int((datetime.datetime.now()-t0).total_seconds()*1000)} ms')
             if verbose:
-                print(f'  HTTP {http.status} {http.reason}, {int((datetime.datetime.now()-t0).total_seconds()*1000)} ms')
-                print(f'  Request headers {http_request.header_items()}')
-                print(f'  Response headers {http.getheaders()}')
+                print(f'    Request headers {http_request.header_items()}')
+                print(f'    Response headers {http.getheaders()}')
         return filepath
 
 
