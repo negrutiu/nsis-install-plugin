@@ -70,7 +70,8 @@ def test_github_plugins(overwrite_newer=False, expect_zero_copies=False):
         {'github_owner': 'negrutiu',      'github_repo': 'nsis-nscurl',        'github_tag': 'latest', 'github_asset_regex': r'NScurl\.zip'},
         {'github_owner': 'negrutiu',      'github_repo': 'nsis-nsxfer',        'github_tag': 'latest', 'github_asset_regex': r'NSxfer.*\.7z'},
         {'github_owner': 'negrutiu',      'github_repo': 'nsis-nsutils',       'github_tag': 'latest', 'github_asset_regex': r'NSutils.*\.7z'},
-        {'github_owner': 'connectiblutz', 'github_repo': 'NSIS-ApplicationID', 'github_tag': 'latest', 'github_asset_regex': r'NSIS-ApplicationID\.zip'},
+        {'github_owner': 'connectiblutz', 'github_repo': 'NSIS-ApplicationID', 'github_tag': 'latest', 'github_asset_regex': r'NSIS-ApplicationID\.zip',
+         'tags': ['ignore', 'debug']},  # ignore (Debug/ApplicationID.dll, DebugUnicode/ApplicationID.dll)
         {'github_owner': 'lordmulder',    'github_repo': 'stdutils',           'github_tag': 'latest', 'github_asset_regex': r'StdUtils.*\.zip',
           'plugin_ignore_regex': r'.*(\/|\\)Tiny(\/|\\).*',
           'tags': ['overlapping']},  # multiple DLLs with same name and target
@@ -97,8 +98,8 @@ def test_web_plugins(overwrite_newer=False, expect_zero_copies=False):
     input_list = [
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/4/4a/AccessControl.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/7/7b/Animate.zip'},
-        {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/1a/AnimGif.zip'},
-        {'url': 'https://nsis.sourceforge.io/mediawiki/images/9/9d/AnimGifPe.zip', 'tags': ['debug']},  # debug dll (ansi)
+        {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/1a/AnimGif.zip', 'tags': ['ignore', 'reserved']},  # ignore (Contrib\AnimGif\AnimGif.dll)
+        {'url': 'https://nsis.sourceforge.io/mediawiki/images/9/9d/AnimGifPe.zip', 'tags': ['ignore', 'debug']},   # ignore debug (Plugins\AnimGif.dll)
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/d/d4/AppAssocReg-0.4.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/8/84/Aero.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/f/fd/Base64.zip'},
