@@ -488,10 +488,7 @@ def nsis_install_plugin_files(instdir, plugindir, input={}):
         destfile = os.path.join(destdir, os.path.basename(file))
         print(f'Copy {format_path(absfile, plugindir)} --> {format_path(destfile, instdir)}')
         os.makedirs(os.path.dirname(destfile), exist_ok=True)
-        # dirmode = os.stat(os.path.dirname(destfile)).st_mode
-        # os.chmod(os.path.dirname(destfile), dirmode | 0o200)   # ensure directory is writable
         shutil.copyfile(absfile, destfile)
-        # os.chmod(os.path.dirname(destfile), dirmode)
         nonlocal copied
         copied += 1
 
