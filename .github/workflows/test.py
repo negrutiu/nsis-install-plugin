@@ -39,7 +39,7 @@ def test_nsis_list(force_download=False, force_extract=False):
                 setupexe = action.download_github_asset(owner, repo, tag, regex, None, action.downloadsdir)
                 action.extract_archive(setupexe, instdir)
         makensisexe = os.path.join(instdir, 'makensis.exe')
-        assert os.path.isfile(makensisexe), f'File not found: {makensisexe}'
+        action.ensure(os.path.isfile(makensisexe), f'File not found: {makensisexe}')
         nsis_list.append((makensisexe, instdir))
 
     for url, regex, dirname in web_sources:
@@ -58,7 +58,7 @@ def test_nsis_list(force_download=False, force_extract=False):
                 setupexe = action.download_file(url, action.downloadsdir)
                 action.extract_archive(setupexe, instdir)
         makensisexe = os.path.join(instdir, 'makensis.exe')
-        assert os.path.isfile(makensisexe), f'File not found: {makensisexe}'
+        action.ensure(os.path.isfile(makensisexe), f'File not found: {makensisexe}')
         nsis_list.append((makensisexe, instdir))
 
     # return action.nsis_list()     # return local NSIS installations
@@ -87,9 +87,9 @@ def test_github_plugins(overwrite_newer=False, expect_zero_copies=False):
         input['nsis_overwrite_newer'] = overwrite_newer
         copied += action.nsis_install_plugin(input)
         if overwrite_newer:
-            assert copied > 0, f'No files were copied for {str(input)}, non-zero expected'
+            action.ensure(copied > 0, f'No files were copied for {str(input)}, non-zero expected')
         if expect_zero_copies:
-            assert copied == 0, f'{copied} files were copied for {str(input)}, zero expected'
+            action.ensure(copied == 0, f'{copied} files were copied for {str(input)}, zero expected')
 
     return copied
 
@@ -257,9 +257,9 @@ def test_web_plugins(overwrite_newer=False, expect_zero_copies=False):
             input['nsis_overwrite_newer'] = overwrite_newer
             copied += action.nsis_install_plugin(input)
             if overwrite_newer:
-                assert copied > 0, f'No files were copied for {str(input)}, non-zero expected'
+                action.ensure(copied > 0, f'No files were copied for {str(input)}, non-zero expected')
             if expect_zero_copies:
-                assert copied == 0, f'{copied} files were copied for {str(input)}, zero expected'
+                action.ensure(copied == 0, f'{copied} files were copied for {str(input)}, zero expected')
 
     return copied
 

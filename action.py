@@ -18,6 +18,31 @@ if verbose := (os.environ.get("RUNNER_DEBUG", default="0") == "1"):
     print(f'Platform: os.name="{os.name}", sys.platform="{sys.platform}"')
 
 
+def ensure(condition, message=None):
+    """ Reimplementation of `assert` that works in optimized mode. """
+    if condition:
+        return  # all good
+
+    import inspect
+    frame = inspect.currentframe().f_back           # caller's frame
+    try:
+        call_line = inspect.getframeinfo(frame).code_context[0]
+        call_line = call_line.strip()               # strip indentation
+        condition = call_line[call_line.find("(") + 1 : call_line.rfind(")")].strip()   # "ensure(cond, msg)" -> "cond, msg"
+        # extract condition from `condition, rf'message'`
+        strdelim = condition[-1]                    # string end-delimiter (' or ")
+        if (msgstart := condition.rfind(strdelim, 0, -1)) > 0:
+            condition = condition[:msgstart]        # remove message string
+            condition = condition.rstrip(strdelim)  # remove string start-delimiter
+            condition = condition.rstrip('rf')      # remove possible r or f prefix
+            condition = condition.rstrip(', ')      # remove comma between condition and message
+    finally:
+        del frame   # avoid reference cycles
+
+    condition = '(' + condition + ')' + (f' --- "{message}"' if message else '')
+    raise AssertionError(condition)
+
+
 def download_github_asset(owner, repo, tag, name_regex, token, outdir):
     """
     Download a GitHub release asset matching the specified regex.
@@ -211,7 +236,7 @@ def pe_header_datetime(path):
 
 def pe_file_is_newer(path1, path2):
     """ Return `True` if `path1` is newer than `path2` based on PE header timestamp. """
-    assert os.path.exists(path1) and os.path.isfile(path1), f'File not found: "{path1}"'
+    ensure(os.path.exists(path1) and os.path.isfile(path1), f'File not found: "{path1}"')
     if os.path.exists(path2) and os.path.isfile(path2):
         return pe_header_datetime(path1) > pe_header_datetime(path2)
     return True     # path1 wins
@@ -399,11 +424,11 @@ def nsis_list():
             if instdir == '/usr/bin' or instdir == '/usr/local/bin':
                 assert os.name == 'posix'
                 instdir = '/usr/share/nsis'
-                assert os.path.exists(instdir) and os.path.isdir(instdir), f'Invalid NSIS share directory: "{instdir}"'
+                ensure(os.path.exists(instdir) and os.path.isdir(instdir), f'Invalid NSIS share directory: "{instdir}"')
             elif os.path.basename(instdir).casefold() == 'bin' and sys.platform == 'darwin':
                 instdir = os.path.dirname(instdir)  # /opt/homebrew/Cellar/makensis/3.11/bin -> /opt/homebrew/Cellar/makensis/3.11/share/nsis
                 instdir += '/share/nsis'
-                assert os.path.exists(instdir) and os.path.isdir(instdir), f'Invalid NSIS share directory: "{instdir}"'
+                ensure(os.path.exists(instdir) and os.path.isdir(instdir), f'Invalid NSIS share directory: "{instdir}"')
 
             unique = True
             for makensis0, instdir0 in installations:
@@ -417,7 +442,7 @@ def nsis_list():
 
 
 def format_path(file, basedir=None):
-    assert file, 'file is None'
+    assert file
     properties = []
     if os.path.exists(file) and os.path.isfile(file) and os.path.splitext(file)[1].lower() in ['.dll', '.exe', '.sys', '.ocx']:
         try:
@@ -468,7 +493,7 @@ def nsis_install_plugin_files(instdir, plugindir, input={}):
     mandatory_directories = ['Include', 'Plugins', 'Stubs']
     for dir in mandatory_directories:
         absdir = os.path.join(instdir, dir)
-        assert os.path.exists(absdir) and os.path.isdir(absdir), f'Invalid NSIS installation directory: "{instdir}" (missing "{dir}")'
+        ensure(os.path.exists(absdir) and os.path.isdir(absdir), f'Invalid NSIS installation directory: "{instdir}" (missing "{dir}")')
     
     # collect all .dll files and classify them by architecture and charset
     def should_ignore(relpath):
@@ -508,7 +533,7 @@ def nsis_install_plugin_files(instdir, plugindir, input={}):
                 print(f'Warning: Ignore "{relfile}" (in "Debug" directory)')
             else:
                 plugin_files.append({'path': file})
-    assert len(plugin_files) > 0, f'No DLL files found in "{plugindir}"'
+    ensure(len(plugin_files) > 0, f'No DLL files found in "{plugindir}"')
 
     for plugin in plugin_files:
         # already classified?
@@ -682,7 +707,7 @@ def nsis_install_plugin(input):
         assert (type(instdir_list) == list and len(instdir_list) > 0), f'Invalid --nsis-directory argument: {instdir_list}'
         for instdir in instdir_list:
             instdir = os.path.normpath(os.path.expandvars(instdir))
-            assert os.path.exists(instdir) and os.path.isdir(instdir), f'Invalid NSIS installation directory: "{instdir}"'
+            ensure(os.path.exists(instdir) and os.path.isdir(instdir), f'Invalid NSIS installation directory: "{instdir}"')
             if os.path.exists(path := os.path.join(instdir, 'makensis.exe')):
                 makensis = path
             elif os.path.exists(path := os.path.join(instdir, 'makensis')):
@@ -692,7 +717,10 @@ def nsis_install_plugin(input):
             nsis_installations.append((makensis, instdir))
     else:
         nsis_installations = nsis_list()
-    assert len(nsis_installations) > 0, 'No NSIS installations found on the system'
+    
+    if len(nsis_installations) == 0:
+        print('No NSIS installations found on the system (tip: use "nsis-directory" to indicate one)')
+        return 0
 
     # download plugin
     github_owner = input.get('github_owner', None)
@@ -707,7 +735,7 @@ def nsis_install_plugin(input):
     elif url:
         pluginzip = download_file(url, downloadsdir)
     else:
-        raise ValueError('No plugin source specified. Use either the GitHub options or the URL option.')
+        raise ValueError('No plugin source specified (tip: use either the GitHub options or the URL option)')
     
     # unzip plugin archive
     plugindir = os.path.join(pluginsdir, os.path.basename(os.path.splitext(pluginzip)[0]))
