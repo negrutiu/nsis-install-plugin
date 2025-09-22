@@ -330,35 +330,52 @@ def pe_print_debug_entries(path):
         #     print(section)
 
 
+def pe_version_has_debug_flag(path):
+    """ Return `True` if the PE file has `VS_FF_DEBUG` flag in its version info, `False` otherwise. """
+    config = lief.PE.ParserConfig()
+    config.parse_exports = config.parse_imports = config.parse_reloc = config.parse_signature = False
+    config.parse_rsrc = True
+    if pe := lief.PE.parse(path, config):
+        assert isinstance(pe, lief.PE.Binary)
+        if pe.has_resources:
+            if pe.resources_manager.has_version:
+                for version in pe.resources_manager.version:
+                    return version.file_info.has(lief.PE.ResourceVersion.fixed_file_info_t.FILE_FLAGS.DEBUG)
+    return False
+
+
 def pe_is_debug(path):
     """ Heuristically determine if a PE file is a debug build. Returns `True` or `False`.
     Notes:
     - This function does not guarantee that a PE file is a debug build, it only tries to identify typical characteristics of debug builds
     - Unable to distinguish between msbuild-generated Debug and Release binaries that are linked statically
     """
-    debug_modules = [r'msvcrtd\.dll', r'msvcp\d*d\.dll', r'vcruntime\d*d\.dll', r'ucrtd\.dll', r'ucrtbase\.dll']
-    for module in pe_imports_module_list(path):
-        for regex in debug_modules:
-            if re.match(regex, module, re.IGNORECASE):
-                # print(f'pe_is_debug("{path}") = True (matched import "{regex}")')
-                # print(f'   imports: {pe_imports_module_list(path)}')
-                # pe_print_debug_entries(path)
-                return True
+    is_debug = False
 
-    debug_sections = [r'\.debug.*', r'\/\d+']
-    for section in pe_section_name_list(path):
-        for regex in debug_sections:
-            if re.match(regex, section, re.IGNORECASE):
-                # print(f'pe_is_debug("{path}") = True (matched section "{regex}")')
-                # print(f'   sections: {pe_section_name_list(path)}')
-                # pe_print_debug_entries(path)
-                return True
+    if not is_debug:
+        if pe_version_has_debug_flag(path):
+            is_debug = True
+
+    if not is_debug:
+        debug_modules = [r'msvcrtd\.dll', r'msvcp\d*d\.dll', r'vcruntime\d*d\.dll', r'ucrtd\.dll', r'ucrtbase\.dll']
+        for module in pe_imports_module_list(path):
+            for regex in debug_modules:
+                if re.match(regex, module, re.IGNORECASE):
+                    is_debug = True
+
+    if not is_debug:
+        debug_sections = [r'\.debug.*', r'\/\d+']
+        for section in pe_section_name_list(path):
+            for regex in debug_sections:
+                if re.match(regex, section, re.IGNORECASE):
+                    is_debug = True
 
     # print(f'pe_is_debug("{path}") = False')
     # print(f'   imports: {pe_imports_module_list(path)}')
     # print(f'   sections: {pe_section_name_list(path)}')
     # pe_print_debug_entries(path)
-    return False
+
+    return is_debug
 
 
 def nsis_version(makensis):
