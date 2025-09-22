@@ -298,43 +298,36 @@ def pe_section_name_list(path):
 
 
 def pe_print_debug_entries(path):
-    import_temp_module('pefile')
-
-    IMAGE_DEBUG_TYPE_COFF = 1
-    IMAGE_DEBUG_TYPE_CODEVIEW = 2
-    IMAGE_DEBUG_TYPE_VC_FEATURE = 12
-    IMAGE_DEBUG_TYPE_POGO = 13
-    IMAGE_DEBUG_TYPE_ILTCG = 14
-    IMAGE_DEBUG_TYPE_MPX = 15
-    IMAGE_DEBUG_TYPE_REPRO = 16
-    IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS = 20
-
-    with pefile.PE(path) as pe:
-        if hasattr(pe, 'DIRECTORY_ENTRY_DEBUG'):
-            import_temp_module('binascii')
-            for entry in pe.DIRECTORY_ENTRY_DEBUG:
-                if entry.struct.Type == IMAGE_DEBUG_TYPE_CODEVIEW:
-                    data = pe.__data__[entry.struct.PointerToRawData:
-                                    entry.struct.PointerToRawData+entry.struct.SizeOfData]
-                    sig = data[:4]
-                    if sig == b'RSDS':
-                        guid = data[4:20]
-                        age  = struct.unpack('<I', data[20:24])[0]
-                        pdb  = data[24:].split(b'\x00',1)[0].decode()
-                        print('   CODEVIEW PDB:', pdb)
-                elif entry.struct.Type == IMAGE_DEBUG_TYPE_VC_FEATURE:
-                    # data = pe.__data__[entry.struct.PointerToRawData:
-                    #                 entry.struct.PointerToRawData+entry.struct.SizeOfData]
-                    # mask = struct.unpack('<I', data[4:8])[0]
-                    # print('   VC_FEATURE mask: 0x%08x' % mask)
-                    raw_offset = entry.struct.PointerToRawData
-                    raw_size   = entry.struct.SizeOfData
-                    raw_bytes = pe.__data__[raw_offset:raw_offset + raw_size]
-                    print(f'   VC_FEATURE: [{raw_size}] {binascii.hexlify(raw_bytes)}')
-                else:
-                    print(f'   Debug Type {entry.struct.Type} not parsed')
+    if pe := lief.PE.parse(path, lief.PE.ParserConfig.all):
+        assert isinstance(pe, lief.PE.Binary)
+        print('++++++++++')
+        print(f'PDB: {pe.codeview_pdb.filename if pe.codeview_pdb else ""}')
+        print('++++++++++')
+        print(f'Number of COFF string tables: {len(pe.coff_string_table) if pe.coff_string_table else 0}')
+        # for table in pe.coff_string_table:
+        #     print(table)      # can be very verbose
+        print('++++++++++')
+        print(f'Number of COFF symbols: {len(pe.symbols) if pe.symbols else 0}')
+        # for symbol in pe.symbols:
+        #     print(symbol)     # can be very verbose
+        print('++++++++++')
+        if pe.has_resources:
+            if pe.resources_manager.has_version:
+                for version in pe.resources_manager.version:
+                    is_debug = version.file_info.has(lief.PE.ResourceVersion.fixed_file_info_t.FILE_FLAGS.DEBUG)
+                    print(f'version.file_info.file_flags: {version.file_info.file_flags} {version.file_info.flags} debug={is_debug}')
+                    print(f'version.file_info.file_flags_mask: {version.file_info.file_flags_mask}')
+                    print(f'version.file_info.file_os: {version.file_info.file_os}')
+                    print(f'version.file_info.file_subtype: {version.file_info.file_subtype}')
+                    print(f'version.file_info.file_type: {version.file_info.file_type} ({version.file_info.file_type_details})')
+        print('++++++++++')
+        if pe.has_debug:
+            for debug in pe.debug:
+                print(debug)
         else:
             print('   No debug information found')
+        # for section in pe.sections:
+        #     print(section)
 
 
 def pe_is_debug(path):
