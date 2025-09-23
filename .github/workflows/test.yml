@@ -95,13 +95,11 @@ jobs:
           github-tag: latest
           github-asset-regex: NScurl\.zip
           github-token: ${{secrets.GITHUB_TOKEN}}   # use github-actions token to avoid rate limiting
-          nsis-overwrite-newer: true
 
-      - name: Install `ShutdownAllow` from web
+      - name: Install `NsArray` from web
         uses: ./    # use ./action.yml
         with:
-          url: https://nsis.sourceforge.io/mediawiki/images/3/35/ShutdownAllow.zip
-          nsis-overwrite-newer: true
+          url: https://nsis.sourceforge.io/mediawiki/images/9/97/NsArray.zip
 
       - name: List NSIS files
         shell: python
