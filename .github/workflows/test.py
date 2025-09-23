@@ -112,7 +112,9 @@ def test_web_plugins(overwrite_newer=False, expect_zero_copies=False):
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/a/aa/Cabdll.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/c/ce/CABSetup.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/c/c7/CabX.zip'},
-        {'url': 'https://nsis.sourceforge.io/mediawiki/images/7/73/CallAnsiPlugin_0.2.zip'},
+        {'url': 'https://nsis.sourceforge.io/mediawiki/images/7/73/CallAnsiPlugin_0.2.zip',
+         'plugin_x86_unicode_regex': r'.*(\/|\\)CallAnsiPlugin\.dll',
+         'tags': ['classify']},   # charset classification failure "Plugins\CallAnsiPlugin.dll"
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/5/50/Cdrom.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/8/8e/ChangeRes.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/9/9c/CLR.zip'},
@@ -141,9 +143,13 @@ def test_web_plugins(overwrite_newer=False, expect_zero_copies=False):
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/a/aa/Extractdllex.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/9/9c/Fct.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/3/34/Firewall-disabler-1.0.zip'},
-        {'url': 'https://nsis.sourceforge.io/mediawiki/images/0/0e/Floatop.zip'},
+        {'url': 'https://nsis.sourceforge.io/mediawiki/images/0/0e/Floatop.zip',
+         'plugin_x86_ansi_regex': r'FloatOp\.dll',
+         'tags': ['classify']},   # charset classification failure "FloatOp.dll"
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/c/c0/FontInfo.zip'},
-        {'url': 'https://nsis.sourceforge.io/mediawiki/images/0/08/FreeArcPlugin.zip'},
+        {'url': 'https://nsis.sourceforge.io/mediawiki/images/0/08/FreeArcPlugin.zip',
+         'plugin_x86_ansi_regex': r'.*(\/|\\)FreeArc\.dll',
+         'tags': ['classify']},   # charset classification failure "FreeArc Plugin for NSIS\Plugin\FreeArc.dll"
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/2/21/Fsp.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/b/b8/NSIS_version_plugin_03.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/9/9a/GetFirstRemovable.zip'},
@@ -158,14 +164,17 @@ def test_web_plugins(overwrite_newer=False, expect_zero_copies=False):
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/5/53/KillProcDll&FindProcDll.zip', 'tags': ['multiple']},  # multiple plugins in one archive
     #   {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/12/KillProcDLL-bin.zip'},       # conflict with above
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/5/55/Linker-1.2.zip'},
-        {'url': 'https://nsis.sourceforge.io/mediawiki/images/a/af/Locate.zip'},
+        {'url': 'https://nsis.sourceforge.io/mediawiki/images/a/af/Locate.zip',
+         'plugin_x86_unicode_regex': r'.*Plugin(\/|\\)locate\.dll',
+         'tags': ['classify']},   # charset classification failure "Plugin\locate.dll"
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/d/d3/LockedList.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/d/d1/LogEx.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/13/Marquee.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/d/d7/Md5dll.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/6/67/Mssql_oledb2.zip', 'tags': ['classify'],
+         'plugin_x86_ansi_regex': r'Plugins(\/|\\)MSSQL_OLEDB\.dll',
          'plugin_x86_unicode_regex': r'Plugins(\/|\\)UMSSQL_OLEDB\.dll',
-         'plugin_x86_ansi_regex': r'Plugins(\/|\\)MSSQL_OLEDB\.dll'},   # charset classification failure "Plugins\UMSSQL_OLEDB.dll"
+         'tags': ['classify']},   # charset classification failure "Plugins\UMSSQL_OLEDB.dll"
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/19/Name2ip.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/c/cf/NewAdvSplash.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/6/69/Nsis7z_19.00.7z', 'tags': ['7z', 'bcj2']},   # BCJ2 filter is not supported by py7zr
@@ -215,8 +224,9 @@ def test_web_plugins(overwrite_newer=False, expect_zero_copies=False):
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/1/13/RegBin.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/4/47/Registry.zip', 'tags': ['classify'],
          'plugin_ignore_regex': r'.*PocketPC.*',
+         'plugin_x86_ansi_regex': r'.*Plugin(\/|\\)registry\.dll',
          'plugin_x86_unicode_regex': r'.*Plugin(\/|\\)registry\.dll',
-         'plugin_x86_ansi_regex': r'.*Plugin(\/|\\)registry\.dll'},    # charset classification failure
+         'tags': ['classify', 'dual']},   # charset classification failure "Plugin\registry.dll" -> works in both ANSI and Unicode installers
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/f/fe/ScrollLicense.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/0/08/SelfDel.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/5/51/Services.zip'},
@@ -229,13 +239,21 @@ def test_web_plugins(overwrite_newer=False, expect_zero_copies=False):
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/f/f9/ShutDown.zip', 'tags': ['stu']},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/3/35/ShutdownAllow.zip', 'tags': ['stu']},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/4/4c/SpiderBanner_plugin.zip'},
-        {'url': 'https://nsis.sourceforge.io/mediawiki/images/7/78/Stack.zip'},
+        {'url': 'https://nsis.sourceforge.io/mediawiki/images/7/78/Stack.zip',
+         'plugin_x86_ansi_regex': r'Plugin(\/|\\)stack\.dll',
+         'plugin_x86_unicode_regex': r'Plugin(\/|\\)stack\.dll',
+         'tags': ['classify', 'dual']},   # charset classification failure "Plugin\stack.dll" -> works in both ANSI and Unicode installers
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/c/c1/SysRestore.zip'},
         {'url': 'http://www.cherubicsoft.com/_media/nsis/tapihelp.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/e/eb/Textreplace.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/5/59/ThreadTimer_v1.1.1.7z', 'tags': ['7z']},
-        {'url': 'https://nsis.sourceforge.io/mediawiki/images/a/aa/Time.zip'},
-        {'url': 'https://nsis.sourceforge.io/mediawiki/images/f/fc/TitlebarProgress.zip'},
+        {'url': 'https://nsis.sourceforge.io/mediawiki/images/a/aa/Time.zip',
+         'plugin_x86_ansi_regex': r'Plugin(\/|\\)time\.dll',
+         'plugin_x86_unicode_regex': r'Plugin(\/|\\)time\.dll',
+         'tags': ['classify', 'dual']},   # charset classification failure "Plugin\time.dll" -> works in both ANSI and Unicode installers
+        {'url': 'https://nsis.sourceforge.io/mediawiki/images/f/fc/TitlebarProgress.zip',
+         'plugin_x86_ansi_regex': r'titprog\.dll',
+         'tags': ['classify']},   # charset classification failure "titprog.dll"
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/2/22/ToggleInstFiles.zip', 'tags': ['stu']},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/4/40/Tooltips.zip'},
         {'url': 'https://nsis.sourceforge.io/mediawiki/images/3/3d/Unicode_V1.2.zip'},

@@ -622,13 +622,6 @@ def nsis_install_plugin_files(instdir, plugindir, input={}):
             else:
                 # example plugins: "Stack" (4 ansi, 6 wide), "Locate" (6 ansi, 7 wide)
                 print(f'Warning: Cannot clearly determine charset of "{relfile}" (A:{ansi_count}/W:{wide_count} imports)')
-        if charset is None and len(plugin_files) == 1:
-            # example plugins: "base64", "HwInfo", "NSISList", "NSISpcre", "NsSCM", "NsUnzip", etc.
-            if arch == 'x86':
-                # classify this plugin as both ansi and unicode
-                charset = 'unicode'
-                plugin_files.append({'path': plugin['path'], 'target': 'x86-ansi'})
-                print(f'Warning: Assuming charset of "{relfile}" is both ansi and unicode (A:{ansi_count}/W:{wide_count} imports, only one x86 plugin DLL found)')
         if charset is None and arch == 'amd64':
             # example plugins: "Registry"
             charset = 'unicode'
@@ -637,7 +630,7 @@ def nsis_install_plugin_files(instdir, plugindir, input={}):
         if charset is not None and arch in ['x86', 'amd64']:
             plugin['target'] = f'{arch}-{charset}'
         else:
-            raise ValueError(f'Cannot classify "{relfile}". architecture="{arch}", charset="{charset}"')
+            raise ValueError(f'Cannot classify "{relfile}". arch={arch}, charset={charset}, A:{ansi_count}/W:{wide_count} imports')
 
     # check for overlapping plugin files
     for plugin in plugin_files:
