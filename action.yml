@@ -69,12 +69,6 @@ inputs:
       The action identifies newer files based on the TimeDateStamp value in the PE file header.
       Default is false.
 
-outputs:
-
-  dummy:
-    description: Dummy output
-    value: ${{steps.install.outputs.dummy}}
-
 branding:
   icon: package   # https://feathericons.com
   color: orange
@@ -134,5 +128,5 @@ runs:
         subprocess.check_call(args)
 
         # outputs
-        with open(os.getenv('GITHUB_OUTPUT'), "a") as f:
-          f.write(f"dummy=Dummy value\n")
+        # with open(os.getenv('GITHUB_OUTPUT'), "a") as f:
+        #   f.write(f"dummy=Dummy value\n")

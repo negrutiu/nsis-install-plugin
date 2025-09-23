@@ -88,7 +88,6 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install `NScurl` from GitHub
-        id: install-nscurl
         uses: ./    # use ./action.yml
         with:
           github-owner: negrutiu
@@ -99,7 +98,6 @@ jobs:
           nsis-overwrite-newer: true
 
       - name: Install `ShutdownAllow` from web
-        id: install-shutdownallow
         uses: ./    # use ./action.yml
         with:
           url: https://nsis.sourceforge.io/mediawiki/images/3/35/ShutdownAllow.zip
@@ -124,9 +122,6 @@ jobs:
                 version = pe_version(file) if file.lower().endswith('.exe') or file.lower().endswith('.dll') else None
                 print(f'{file}{"[" + version + "]" if version is not None else ""}', flush=True)
             print('--------------------------------------------------------------------------------', flush=True)
-
-          print(rf'install-nscurl.outputs.dummy = "${{steps.install-nscurl.outputs.dummy}}"', flush=True)
-          print(rf'install-shutdownallow.outputs.dummy = "${{steps.install-shutdownallow.outputs.dummy}}"', flush=True)
 
   # --------------------------------------------------------------------------------
 
