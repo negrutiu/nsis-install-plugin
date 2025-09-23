@@ -459,7 +459,7 @@ def nsis_list():
     return installations
 
 
-def format_path(file, basedir=None):
+def format_path(file, basedir=None, quotechar='"'):
     assert file
     properties = []
     if os.path.exists(file) and os.path.isfile(file) and os.path.splitext(file)[1].lower() in ['.dll', '.exe', '.sys', '.ocx']:
@@ -471,7 +471,7 @@ def format_path(file, basedir=None):
             if v := pe_version(file): properties.append(v)
         except:
             pass
-    return f'"{os.path.relpath(file, basedir) if basedir else file}"{" ["+", ".join(properties)+"]" if properties else ""}'
+    return f'{quotechar}{os.path.relpath(file, basedir) if basedir else file}{quotechar}{" ["+", ".join(properties)+"]" if properties else ""}'
 
 
 def nsis_install_plugin_files(instdir, plugindir, input={}):
