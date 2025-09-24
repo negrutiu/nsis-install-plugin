@@ -146,6 +146,18 @@ jobs:
           name: nsis-install-plugin_${{matrix.os}}
           path: .github/workflows/*.exe
 
+      - name: Run test installer (Windows)
+        if: runner.os == 'Windows'
+        working-directory: .github/workflows
+        shell: python
+        run: |
+          import glob, os, subprocess, sys
+          for exe in glob.glob('*.exe'):
+            args = [exe, '/S']
+            print(f'Run {args}', flush=True)
+            subprocess.check_call(args)
+            print('--------------------------------------------------------------------------------', flush=True)
+
   # --------------------------------------------------------------------------------
 
   advanced-tests:
