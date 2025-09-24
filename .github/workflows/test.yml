@@ -123,6 +123,24 @@ jobs:
               if os.path.isfile(file):
                 print(action.format_path(file, quotechar=''), flush=True)
 
+      - name: Build test installer
+        working-directory: .github/workflows
+        shell: python
+        run: |
+          import glob, os, subprocess, sys
+          sys.path.insert(0, r'${{github.workspace}}')
+          import action
+
+          index = 0
+          for makensis, instdir in action.nsis_list():
+            index += 1
+            for target in action.nsis_supported_targets(instdir):
+              args = [makensis, '-V3', f'-DTARGET={target}', f'-DFILEPREFIX=nsis{index}_', rf'-DFILESUFFIX=_${{matrix.os}}', 'Test.nsi']
+              print(f'Run {args}', flush=True)
+              subprocess.check_call(args)
+              print('--------------------------------------------------------------------------------', flush=True)
+
+
   # --------------------------------------------------------------------------------
 
   advanced-tests:
