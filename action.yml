@@ -23,14 +23,14 @@ inputs:
   # NSIS plugin hosted on a web server
   url:
     required: false
-    description: URL of the NSIS plugin archive (e.g. "https://nsis.sourceforge.io/mediawiki/images/3/35/ShutdownAllow.zip")
+    description: URL of the NSIS plugin archive (e.g. "https://nsis.sourceforge.io/mediawiki/images/9/97/NsArray.zip")
 
   # NSIS plugin package details
   plugin-name:
     required: false
     description: |
-      Optional name of the NSIS plugin (e.g. "NScurl", "ShutdownAllow").
-      If not provided, the name will be inferred from plugin DLL files.
+      Optional name of the NSIS plugin (e.g. "NScurl", "NsArray").
+      If not specified, the plugin name is inferred from the file names.
   plugin-x86-ansi-regex:
     required: false
     description: |
