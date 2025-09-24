@@ -114,7 +114,8 @@ jobs:
           for makensis, instdir in nsis_installations_list:
             arch = action.pe_architecture(makensis) if os.name == 'nt' else 'amd64'
             version = action.nsis_version(makensis)
-            print(f'Found nsis/{version}-{arch} in "{makensis}", "{instdir}"', flush=True)
+            targets = action.nsis_supported_targets(instdir)
+            print(f'Found nsis/{version}-{arch}/{targets} in "{makensis}", "{instdir}"', flush=True)
 
           for makensis, instdir in nsis_installations_list:
             print('--------------------------------------------------------------------------------', flush=True)

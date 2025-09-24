@@ -459,6 +459,22 @@ def nsis_list():
     return installations
 
 
+def nsis_supported_targets(instdir):
+    """ Return a list of supported target architectures for the NSIS installation at `instdir`. """
+    targets = []
+    plugindir = os.path.join(instdir, 'Plugins')
+    stubdir = os.path.join(instdir, 'Stubs')
+    assert os.path.exists(plugindir) and os.path.isdir(plugindir), f'Invalid NSIS installation directory: "{instdir}"'
+    assert os.path.exists(stubdir) and os.path.isdir(stubdir), f'Invalid NSIS installation directory: "{instdir}"'
+    for targetdir in glob.glob(os.path.join(plugindir, '*')):
+        if os.path.isdir(targetdir):
+            target = os.path.basename(targetdir)
+            if os.path.exists(os.path.join(targetdir, 'System.dll')) and \
+               os.path.exists(os.path.join(stubdir, 'lzma-') + target):
+                targets.append(target)
+    return targets
+
+
 def format_path(file, basedir=None, quotechar='"'):
     assert file
     properties = []
