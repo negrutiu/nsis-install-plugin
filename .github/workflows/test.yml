@@ -108,17 +108,19 @@ jobs:
           sys.path.insert(0, r'${{github.workspace}}')
           import action
 
-          for makensis, instdir in action.nsis_list():
+          nsis_installations_list = action.nsis_list()
+          assert len(nsis_installations_list) > 0, 'No NSIS installations found!'
+
+          for makensis, instdir in nsis_installations_list:
             arch = action.pe_architecture(makensis) if os.name == 'nt' else 'amd64'
-            print(f'Found "{makensis}", "{instdir}", ver:{action.nsis_version(makensis)}, arch:{arch}')
-            print('--------------------------------------------------------------------------------', flush=True)
-            os.system(f'"{makensis}" -VERSION')
-            print('', flush=True)
+            version = action.nsis_version(makensis)
+            print(f'Found nsis/{version}-{arch} in "{makensis}", "{instdir}"', flush=True)
+
+          for makensis, instdir in nsis_installations_list:
             print('--------------------------------------------------------------------------------', flush=True)
             for file in glob.glob(os.path.join(instdir, '**'), recursive=True):
               if os.path.isfile(file):
                 print(action.format_path(file, quotechar=''), flush=True)
-            print('--------------------------------------------------------------------------------', flush=True)
 
   # --------------------------------------------------------------------------------
 
