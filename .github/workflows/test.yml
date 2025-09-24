@@ -140,6 +140,11 @@ jobs:
               subprocess.check_call(args)
               print('--------------------------------------------------------------------------------', flush=True)
 
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nsis-install-plugin_${{matrix.os}}
+          path: .github/workflows/*.exe
 
   # --------------------------------------------------------------------------------
 
