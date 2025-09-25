@@ -477,15 +477,14 @@ def nsis_supported_targets(instdir):
 def format_path(file, basedir=None, quotechar='"'):
     assert file
     properties = []
-    if os.path.exists(file) and os.path.isfile(file) and os.path.splitext(file)[1].lower() in ['.dll', '.exe', '.sys', '.ocx']:
-        try:
-            if dt := pe_header_datetime(file): properties.append(str(dt.date()))
-        except:
-            pass
-        try:
-            if v := pe_version(file): properties.append(v)
-        except:
-            pass
+    if os.path.exists(file) and os.path.isfile(file):
+        if os.path.splitext(file)[1].lower() in ['.dll', '.exe', '.sys', '.ocx']:
+            if dt := pe_header_datetime(file):
+                properties.append(str(dt.date()))
+            if v := pe_version(file):
+                properties.append(v)
+    else:
+        properties.append('not found')
     return f'{quotechar}{os.path.relpath(file, basedir) if basedir else file}{quotechar}{" ["+", ".join(properties)+"]" if properties else ""}'
 
 

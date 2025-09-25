@@ -11,8 +11,8 @@ on:
 
 jobs:
 
-  basic-tests:
-    name: Basic Tests
+  install-tests:
+    name: Install Tests
     strategy:
       fail-fast: false
       matrix:
@@ -47,6 +47,7 @@ jobs:
           arch: amd64
 
       - name: Debug
+        if: runner.debug == '1'
         shell: python
         run: |
           import glob, os, sys
@@ -63,6 +64,7 @@ jobs:
           print('--------------------------------------------------------------------------------', flush=True)
           print('>> makensis', flush=True)
           os.system('makensis -VERSION')
+          print(flush=True)
           if sys.platform == 'darwin':
             print('--------------------------------------------------------------------------------', flush=True)
             nsis_root = os.path.dirname(os.path.dirname(os.path.realpath("/opt/homebrew/bin/makensis")))
@@ -90,7 +92,6 @@ jobs:
         with:
           github-owner: negrutiu
           github-repo: nsis-nscurl
-          github-tag: latest
           github-asset-regex: NScurl\.zip
 
       - name: Install `NsArray` from web
@@ -157,8 +158,8 @@ jobs:
 
   # --------------------------------------------------------------------------------
 
-  advanced-tests:
-    name: Advanced Tests
+  mass-tests:
+    name: Mass Tests
     strategy:
       fail-fast: false
       matrix:

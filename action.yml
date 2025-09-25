@@ -95,34 +95,34 @@ runs:
         args = ['sudo'] if sys.platform == 'linux' else []
         args += [sys.executable, '-O', os.path.join(repodir, 'action.py')]
 
-        if (param := r'${{inputs.github-owner}}') != '':
+        if param := r'${{inputs.github-owner}}':
           args += [f'--github-owner={param}']
-        if (param := r'${{inputs.github-repo}}') != '':
+        if param := r'${{inputs.github-repo}}':
           args += [f'--github-repo={param}']
-        if (param := r'${{inputs.github-tag}}') != '':
+        if param := r'${{inputs.github-tag}}':
           args += [f'--github-tag={param}']
-        if (param := r'${{inputs.github-asset-regex}}') != '':
+        if param := r'${{inputs.github-asset-regex}}':
           args += [f'--github-asset-regex={param}']
-        if (param := r'${{inputs.github-token}}') != '':
+        if param := r'${{inputs.github-token}}':
           args += [f'--github-token={param}']
 
-        if (param := r'${{inputs.url}}') != '':
+        if param := r'${{inputs.url}}':
           args += [f'--url={param}']
 
-        if (param := r'${{inputs.plugin-name}}') != '':
+        if param := r'${{inputs.plugin-name}}':
           args += [f'--plugin-name={param}']
-        if (param := r'${{inputs.plugin-x86-ansi-regex}}') != '':
+        if param := r'${{inputs.plugin-x86-ansi-regex}}':
           args += [f'--plugin-x86-ansi-regex={param}']
-        if (param := r'${{inputs.plugin-x86-unicode-regex}}') != '':
+        if param := r'${{inputs.plugin-x86-unicode-regex}}':
           args += [f'--plugin-x86-unicode-regex={param}']
-        if (param := r'${{inputs.plugin-amd64-unicode-regex}}') != '':
+        if param := r'${{inputs.plugin-amd64-unicode-regex}}':
           args += [f'--plugin-amd64-unicode-regex={param}']
-        if (param := r'${{inputs.plugin-ignore-regex}}') != '':
+        if param := r'${{inputs.plugin-ignore-regex}}':
           args += [f'--plugin-ignore-regex={param}']
 
-        if (param := r'${{inputs.nsis-directory}}') != '':
+        if param := r'${{inputs.nsis-directory}}':
           args += [f'--nsis-directory={param}']
-        if (param := r'${{inputs.nsis-overwrite-newer}}') != '' and param.lower() == 'true':
+        if (param := r'${{inputs.nsis-overwrite-newer}}') and param.lower() == 'true':
           args += [f'--nsis-overwrite-newer']
 
         print(f'Running: {args}', flush=True)

@@ -70,7 +70,6 @@ jobs:
         with:
           github-owner: negrutiu
           github-repo: nsis-nscurl
-          github-tag: latest
           github-asset-regex: NScurl\.zip
 
       - name: Install `NsArray` from web
@@ -82,4 +81,4 @@ jobs:
 # Related topics
 
 - At the time of writing, the `windows-2025` runner image comes with no NSIS installation.
-You can use the [negrutiu/nsis-install](https://github.com/marketplace/actions/install-negrutiu-nsis) action to install an NSIS fork on the runner.
+You can use the [negrutiu/nsis-install](https://github.com/marketplace/actions/install-negrutiu-nsis) action to install NSIS on the runner.
