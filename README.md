@@ -21,7 +21,7 @@ Regular expression to match the asset name in the GitHub release. The first matc
 
 ### `github-token`
 
-GitHub token used to authenticate the download request. Should be used to avoid running into GitHub API rate limits.
+Custom GitHub token used for authentication when accessing the GitHub API. This is used to avoid running into GitHub rate limits when downloading release assets. Defaults to `${{github.token}}`, which is automatically provided by GitHub Actions.
 
 ### `url`
 
@@ -72,7 +72,6 @@ jobs:
           github-repo: nsis-nscurl
           github-tag: latest
           github-asset-regex: NScurl\.zip
-          github-token: ${{secrets.GITHUB_TOKEN}}   # use github-actions token to avoid rate limits
 
       - name: Install `NsArray` from web
         uses: negrutiu/nsis-install-plugin@v1

@@ -8,6 +8,7 @@ action.tempdir = os.path.join(scriptdir, 'runtime')                 # override
 action.downloadsdir = os.path.join(action.tempdir, 'downloads')
 action.pluginsdir = os.path.join(action.tempdir, 'plugins')
 action.modulesdir = os.path.join(action.tempdir, 'modules')
+github_token = None
 
 def print_line(char='-', length=80, suffix=''):
     print(char * length + suffix)
@@ -36,7 +37,7 @@ def test_nsis_list(force_download=False, force_extract=False):
                     else:
                         setupexe = file     # use this file
             if not setupexe:
-                setupexe = action.download_github_asset(owner, repo, tag, regex, None, action.downloadsdir)
+                setupexe = action.download_github_asset(owner, repo, tag, regex, github_token, action.downloadsdir)
                 action.extract_archive(setupexe, instdir)
         makensisexe = os.path.join(instdir, 'makensis.exe')
         action.ensure(os.path.isfile(makensisexe), f'File not found: {makensisexe}')
@@ -85,6 +86,7 @@ def test_github_plugins(overwrite_newer=False, expect_zero_copies=False):
         print(f'[github][{index}/{len(input_list)}] {str(input)}')
         input['nsis_directory'] = [nsis[1] for nsis in test_nsis_list()]  # list of NSIS installation directories
         input['nsis_overwrite_newer'] = overwrite_newer
+        input['github_token'] = github_token
         copied += action.nsis_install_plugin(input)
         if overwrite_newer:
             action.ensure(copied > 0, f'No files were copied for {str(input)}, non-zero expected')
@@ -287,6 +289,7 @@ if __name__ == '__main__':
     from argparse import ArgumentParser
     parser = ArgumentParser()
     parser.add_argument("-v", "--verbose", action='store_true', help='more verbose output')
+    parser.add_argument("--github-token", default='', help='custom github token')
     parser.add_argument("--recreate-test-nsis", action='store_true', help='download and extract NSIS test installations even if they already exist')
     args = parser.parse_args()
 
@@ -294,6 +297,7 @@ if __name__ == '__main__':
 
     if args.verbose:
         action.verbose = True
+    github_token = args.github_token
 
     print('Preparing temporary NSIS installations...')
     test_nsis_list(force_extract=args.recreate_test_nsis, force_download=args.recreate_test_nsis)

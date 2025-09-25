@@ -57,16 +57,15 @@ def download_github_asset(owner, repo, tag, name_regex, token, outdir):
     asset_size = None
     asset_path = None
 
-    # GITHUB_TOKEN is optional, but recommended to avoid rate limiting
-    if not token:
-        token = os.environ.get('GITHUB_TOKEN', None)    # fallback to environment variable
-
     t0 = datetime.datetime.now()
     ssl_context = ssl.create_default_context(cafile=certifi.where())
     http_request = request.Request(url)
     http_request.add_header('Accept', 'application/vnd.github.v3+json')
     if token:
         http_request.add_header('Authorization', f'Bearer {token}')
+        if verbose: print(f'Info: Found valid GitHub token ({len(token)} chars)')
+    else:
+        print('Warning: No GitHub token provided, may run into API rate limits')
     with request.urlopen(http_request, context=ssl_context) as http:
         import json
         response_json = json.loads(http.read().decode('utf-8'))

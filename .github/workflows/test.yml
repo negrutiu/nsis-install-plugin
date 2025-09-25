@@ -13,8 +13,6 @@ jobs:
 
   basic-tests:
     name: Basic Tests
-    permissions:
-      contents: read    # GITHUB_TOKEN permission to read repository contents
     strategy:
       fail-fast: false
       matrix:
@@ -94,7 +92,6 @@ jobs:
           github-repo: nsis-nscurl
           github-tag: latest
           github-asset-regex: NScurl\.zip
-          github-token: ${{secrets.GITHUB_TOKEN}}   # use github-actions token to avoid rate limiting
 
       - name: Install `NsArray` from web
         uses: ./    # use ./action.yml
@@ -162,8 +159,6 @@ jobs:
 
   advanced-tests:
     name: Advanced Tests
-    permissions:
-      contents: read    # GITHUB_TOKEN permission to read repository contents
     strategy:
       fail-fast: false
       matrix:
@@ -184,18 +179,14 @@ jobs:
           7zz i
 
       - name: Install NSIS plugins (overwrite newer)
-        env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}   # required by action.py to download GitHub assets
         shell: python
         run: |
           import glob, os, sys
           sys.path.insert(0, os.path.join(r'${{github.workspace}}', '.github', 'workflows'))
           import test   # .github/workflows/test.py
 
-          print('Preparing temporary NSIS installations...')
-          test.test_nsis_list()
-
           copied = 0
+          test.github_token = r'${{github.token}}'
           copied += test.test_github_plugins(overwrite_newer=True, expect_zero_copies=False)
           copied += test.test_web_plugins(overwrite_newer=True, expect_zero_copies=False)
 
@@ -205,8 +196,6 @@ jobs:
           assert copied > 0, 'No files were copied in the first round, something is wrong!'
 
       - name: Install NSIS plugins (no overwrite)
-        env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}   # required by action.py to download GitHub assets
         shell: python
         run: |
           import glob, os, sys
@@ -214,6 +203,7 @@ jobs:
           import test
 
           copied = 0
+          test.github_token = r'${{github.token}}'
           copied += test.test_github_plugins(overwrite_newer=False, expect_zero_copies=True)
           copied += test.test_web_plugins(overwrite_newer=False, expect_zero_copies=True)
 

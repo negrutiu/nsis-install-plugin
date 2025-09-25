@@ -17,8 +17,9 @@ inputs:
     required: false
     description: Regular expression to match the asset name (e.g. "NScurl\.zip")
   github-token:
+    default: ${{github.token}}
     required: false
-    description: GitHub token with permission to access the repository. If not provided, the GITHUB_TOKEN environment variable will be used.
+    description: Custom GitHub token used for authentication when accessing the GitHub API. This is used to avoid running into GitHub rate limits when downloading release assets.
   
   # NSIS plugin hosted on a web server
   url:
