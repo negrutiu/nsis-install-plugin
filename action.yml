@@ -1,5 +1,5 @@
 name: Install NSIS plugin
-description: Install generic NSIS plugins on GitHub runners.
+description: Install NSIS plugin in GitHub runners
 
 inputs:
 

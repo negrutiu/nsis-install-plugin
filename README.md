@@ -1,6 +1,7 @@
 # GitHub action `negrutiu/nsis-install-plugin`
 
-[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-GitHub%20Actions-blue?logo=github)](https://github.com/marketplace/actions/install-nsis-plugin)
+[![Static Badge](https://img.shields.io/badge/GitHub%20Marketplace-negrutiu%2Fnsis--install--plugin-blue?style=flat-square&logo=github)
+](https://github.com/marketplace/actions/install-nsis-plugin)
 
 This GitHub action downloads and installs [NSIS](https://nsis.sourceforge.io/Main_Page) plugins onto an existing NSIS installation.  
 It runs on all GitHub-hosted runners (Windows, Linux, macOS).  
@@ -81,4 +82,4 @@ jobs:
 # Related topics
 
 - At the time of writing, the `windows-2025` runner image comes with no NSIS installation.
-You can use the [negrutiu/nsis-install](https://github.com/marketplace/actions/install-negrutiu-nsis) action to install NSIS on the runner.
+You can use the [negrutiu/nsis-install](https://github.com/marketplace/actions/install-nsis-compiler) action to install NSIS on the runner.
