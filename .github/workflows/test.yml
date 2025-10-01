@@ -36,13 +36,13 @@ jobs:
 
       - name: Install NSIS-x86 (windows)
         if: runner.os == 'Windows'
-        uses: negrutiu/nsis-install@v1
+        uses: negrutiu/nsis-install@v2
         with:
           arch: x86
 
       - name: Install NSIS-amd64 (windows)
         if: runner.os == 'Windows'
-        uses: negrutiu/nsis-install@v1
+        uses: negrutiu/nsis-install@v2
         with:
           arch: amd64
 

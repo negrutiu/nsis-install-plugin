@@ -66,17 +66,17 @@ name: Install NSIS plugin
 jobs:
   build-project:
     steps:
-      - name: Install `NScurl` from GitHub
-        uses: negrutiu/nsis-install-plugin@v1
-        with:
-          github-owner: negrutiu
-          github-repo: nsis-nscurl
-          github-asset-regex: NScurl\.zip
+    - name: Install `NScurl` from GitHub
+      uses: negrutiu/nsis-install-plugin@v1
+      with:
+        github-owner: negrutiu
+        github-repo: nsis-nscurl
+        github-asset-regex: NScurl\.zip
 
-      - name: Install `NsArray` from web
-        uses: negrutiu/nsis-install-plugin@v1
-        with:
-          url: https://nsis.sourceforge.io/mediawiki/images/9/97/NsArray.zip
+    - name: Install `NsArray` from web
+      uses: negrutiu/nsis-install-plugin@v1
+      with:
+        url: https://nsis.sourceforge.io/mediawiki/images/9/97/NsArray.zip
 ```
 
 # Related topics
