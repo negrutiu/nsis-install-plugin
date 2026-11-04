@@ -128,15 +128,17 @@ def download_file(url, outdir, headers={}):
         return filepath
 
 
-def import_temp_module(modname):
+def import_temp_module(modname, reuse=True):
     """ Import module, installing it to a temporary location if necessary. """
     try:
         globals()[modname] = importlib.import_module(modname)
     except ImportError:
         moduledir = os.path.join(modulesdir, modname)
+        if not reuse:
+            shutil.rmtree(moduledir, ignore_errors=True)
         if not os.path.exists(moduledir):
             print(f'Install {modname} into temporary directory {moduledir}')
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "--target", moduledir, modname])
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "--index-url", "https://pypi.python.org/simple", "--target", moduledir, modname])
         print(f'Import "{moduledir}"')
         sys.path.insert(0, moduledir)
         globals()[modname] = importlib.import_module(modname)
