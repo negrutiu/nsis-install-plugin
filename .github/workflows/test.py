@@ -69,7 +69,7 @@ def test_nsis_list(force_download=False, force_extract=False):
 def test_github_plugins(overwrite_newer=False, expect_zero_copies=False):
     input_list = [
         {'github_owner': 'negrutiu',      'github_repo': 'nsis-nscurl',        'github_tag': 'latest', 'github_asset_regex': r'NScurl\.zip'},
-        {'github_owner': 'negrutiu',      'github_repo': 'nsis-nsxfer',        'github_tag': 'latest', 'github_asset_regex': r'NSxfer.*\.7z'},
+        {'github_owner': 'negrutiu',      'github_repo': 'nsis-nsxfer',        'github_tag': 'latest', 'github_asset_regex': r'NSxfer\.zip'},
         {'github_owner': 'negrutiu',      'github_repo': 'nsis-nsutils',       'github_tag': 'latest', 'github_asset_regex': r'NSutils.*\.7z'},
         {'github_owner': 'connectiblutz', 'github_repo': 'NSIS-ApplicationID', 'github_tag': 'latest', 'github_asset_regex': r'NSIS-ApplicationID\.zip',
          'tags': ['ignore', 'debug']},  # ignore (Debug/ApplicationID.dll, DebugUnicode/ApplicationID.dll)
